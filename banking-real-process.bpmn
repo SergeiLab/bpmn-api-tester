@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_Banking"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  
+  <bpmn:process id="Process_Banking_Real" name="Banking Real API Process" isExecutable="true">
+    
+    <bpmn:startEvent id="Start" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <bpmn:serviceTask id="Task_GetBalance" name="Get Rewards Balance">
+      <bpmn:documentation>
+        GET /api/rb/rewardsPay/hackathon/v1/cards/accounts/external/40817810000000000001/rewards/balance
+      </bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="api.endpoint" 
+            value="/api/rb/rewardsPay/hackathon/v1/cards/accounts/external/40817810000000000001/rewards/balance" />
+          <camunda:property name="api.method" value="GET" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:endEvent id="End" name="End">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start" targetRef="Task_GetBalance" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_GetBalance" targetRef="End" />
+    
+  </bpmn:process>
+</bpmn:definitions>

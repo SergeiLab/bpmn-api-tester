@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_1"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  
+  <bpmn:process id="Process_RewardsPayment" name="Rewards Payment Process" isExecutable="true">
+    
+    <bpmn:documentation>
+      Процесс начисления и списания бонусов с использованием Banking API
+    </bpmn:documentation>
+    
+    <!-- Start Event -->
+    <bpmn:startEvent id="StartEvent_1" name="Start Process">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <!-- Task 1: Get Account Balance -->
+    <bpmn:serviceTask id="Task_GetBalance" name="Get Account Rewards Balance">
+      <bpmn:documentation>
+        GET /api/rb/rewardsPay/hackathon/v1/cards/accounts/external/{externalAccountID}/rewards/balance
+      </bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="api.endpoint" 
+            value="/api/rb/rewardsPay/hackathon/v1/cards/accounts/external/{externalAccountID}/rewards/balance" />
+          <camunda:property name="api.method" value="GET" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Task 2: Check Balance Sufficiency -->
+    <bpmn:serviceTask id="Task_CheckBalance" name="Validate Balance">
+      <bpmn:documentation>
+        Проверка достаточности бонусов для списания
+      </bpmn:documentation>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Task 3: Charge Rewards -->
+    <bpmn:serviceTask id="Task_ChargeRewards" name="Charge Rewards from Account">
+      <bpmn:documentation>
+        POST /api/rb/rewardsPay/hackathon/v1/cards/accounts/external/{externalAccountID}/rewards/charge
+        
+        Request body:
+        {
+          "amount": 1000,
+          "currency": "RUB",
+          "description": "Purchase payment"
+        }
+      </bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="api.endpoint" 
+            value="/api/rb/rewardsPay/hackathon/v1/cards/accounts/external/{externalAccountID}/rewards/charge" />
+          <camunda:property name="api.method" value="POST" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Task 4: Get Transaction History -->
+    <bpmn:serviceTask id="Task_GetHistory" name="Get Transaction History">
+      <bpmn:documentation>
+        GET /api/rb/rewardsPay/hackathon/v1/cards/accounts/external/{externalAccountID}/rewards/history
+      </bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="api.endpoint" 
+            value="/api/rb/rewardsPay/hackathon/v1/cards/accounts/external/{externalAccountID}/rewards/history" />
+          <camunda:property name="api.method" value="GET" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Task 5: Verify Final Balance -->
+    <bpmn:serviceTask id="Task_VerifyBalance" name="Verify Final Balance">
+      <bpmn:documentation>
+        GET /api/rb/rewardsPay/hackathon/v1/cards/accounts/external/{externalAccountID}/rewards/balance
+        
+        Проверка корректности списания
+      </bpmn:documentation>
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="api.endpoint" 
+            value="/api/rb/rewardsPay/hackathon/v1/cards/accounts/external/{externalAccountID}/rewards/balance" />
+          <camunda:property name="api.method" value="GET" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- End Event -->
+    <bpmn:endEvent id="EndEvent_1" name="Process Completed">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_GetBalance" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_GetBalance" targetRef="Task_CheckBalance" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_CheckBalance" targetRef="Task_ChargeRewards" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_ChargeRewards" targetRef="Task_GetHistory" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_GetHistory" targetRef="Task_VerifyBalance" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_VerifyBalance" targetRef="EndEvent_1" />
+    
+  </bpmn:process>
+  
+  <!-- BPMN Diagram (optional, for visualization) -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_RewardsPayment">
+      
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Task_GetBalance_di" bpmnElement="Task_GetBalance">
+        <dc:Bounds x="240" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Task_CheckBalance_di" bpmnElement="Task_CheckBalance">
+        <dc:Bounds x="390" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Task_ChargeRewards_di" bpmnElement="Task_ChargeRewards">
+        <dc:Bounds x="540" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Task_GetHistory_di" bpmnElement="Task_GetHistory">
+        <dc:Bounds x="690" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Task_VerifyBalance_di" bpmnElement="Task_VerifyBalance">
+        <dc:Bounds x="840" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="992" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="188" y="120" />
+        <di:waypoint x="240" y="120" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="340" y="120" />
+        <di:waypoint x="390" y="120" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="490" y="120" />
+        <di:waypoint x="540" y="120" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="640" y="120" />
+        <di:waypoint x="690" y="120" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="790" y="120" />
+        <di:waypoint x="840" y="120" />
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="940" y="120" />
+        <di:waypoint x="992" y="120" />
+      </bpmndi:BPMNEdge>
+      
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  
+</bpmn:definitions>
