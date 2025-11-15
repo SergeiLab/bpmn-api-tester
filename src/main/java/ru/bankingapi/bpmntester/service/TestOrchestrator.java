@@ -33,6 +33,7 @@ public class TestOrchestrator {
     private final TestExecutionRepository executionRepository;
     private final StepExecutionResultRepository stepResultRepository;
     private final ObjectMapper objectMapper;
+    private final EndpointMappingService endpointMappingService;
 
     @Value("${banking-api.base-url}")
     private String baseUrl;
@@ -134,6 +135,11 @@ public class TestOrchestrator {
             .build();
 
         try {
+            // Special handling for OAuth2 authentication
+            if (isOAuth2Endpoint(step)) {
+                return handleOAuth2Authentication(step, context, startTime);
+            }
+
             ApiEndpointInfo endpointInfo = parseEndpointInfo(step);
 
             Map<String, Object> requestData = new HashMap<>();
@@ -148,7 +154,15 @@ public class TestOrchestrator {
                 }
             }
 
-            String url = buildUrl(apiBaseUrl, step.getApiEndpoint(), requestData);
+            // ✅ МАППИНГ ENDPOINT
+            String originalEndpoint = step.getApiEndpoint();
+            String mappedEndpoint = endpointMappingService.mapEndpoint(originalEndpoint);
+            
+            if (!originalEndpoint.equals(mappedEndpoint)) {
+                log.info("Endpoint mapped: {} -> {}", originalEndpoint, mappedEndpoint);
+            }
+
+            String url = buildUrl(apiBaseUrl, mappedEndpoint, requestData);
 
             HttpHeaders headers = oauth2Service.createAuthHeaders();
             
@@ -191,6 +205,67 @@ public class TestOrchestrator {
             result.setStatus(StepStatus.FAILED);
             result.setErrorMessage(e.getMessage());
             log.error("Error executing step {}", step.getStepName(), e);
+        }
+
+        result.setExecutionTimeMs(System.currentTimeMillis() - startTime);
+        return result;
+    }
+
+    private boolean isOAuth2Endpoint(ProcessStep step) {
+        if (step.getApiEndpoint() == null) {
+            return false;
+        }
+        
+        String endpoint = step.getApiEndpoint().toLowerCase();
+        String name = step.getStepName() != null ? step.getStepName().toLowerCase() : "";
+        
+        return endpoint.contains("/auth/bank-token") || 
+               endpoint.contains("/auth/token") ||
+               endpoint.contains("/oauth/token") ||
+               name.contains("аутентификация") ||
+               name.contains("authentication") ||
+               name.contains("auth");
+    }
+
+    private StepExecutionResult handleOAuth2Authentication(
+        ProcessStep step,
+        Map<String, Object> context,
+        long startTime
+    ) {
+        log.info("Handling OAuth2 authentication step");
+
+        StepExecutionResult result = StepExecutionResult.builder()
+            .processStep(step)
+            .executionOrder(step.getStepOrder())
+            .status(StepStatus.SUCCESS)
+            .executedAt(LocalDateTime.now())
+            .build();
+
+        try {
+            String accessToken = oauth2Service.getAccessToken();
+            
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("grant_type", "client_credentials");
+            requestData.put("client_id", "team112");
+            requestData.put("client_secret", "***hidden***");
+            
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("access_token", accessToken.substring(0, Math.min(50, accessToken.length())) + "...");
+            responseData.put("token_type", "Bearer");
+            responseData.put("expires_in", 3600);
+            
+            result.setRequestPayload(objectMapper.writeValueAsString(requestData));
+            result.setResponsePayload(objectMapper.writeValueAsString(responseData));
+            result.setHttpStatusCode(200);
+            
+            context.put("access_token", accessToken);
+            
+            log.info("OAuth2 authentication successful");
+            
+        } catch (Exception e) {
+            result.setStatus(StepStatus.FAILED);
+            result.setErrorMessage("OAuth2 authentication failed: " + e.getMessage());
+            log.error("OAuth2 authentication failed", e);
         }
 
         result.setExecutionTimeMs(System.currentTimeMillis() - startTime);

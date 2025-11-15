@@ -39,8 +39,8 @@ public class SequenceDiagramParser {
         String[] lines = text.split("\n");
         int order = 0;
 
-        Pattern plantUmlPattern = Pattern.compile("^\\s*(.+?)\\s*->\\s*(.+?)\\s*:\\s*(.+)$");
-        Pattern methodPattern = Pattern.compile("(GET|POST|PUT|DELETE|PATCH)\\s+(/\\S+)");
+        Pattern arrowPattern = Pattern.compile("^\\s*(.+?)\\s*->\\s*(.+?)\\s*:\\s*(.+)$");
+        Pattern methodPattern = Pattern.compile("(GET|POST|PUT|DELETE|PATCH)\\s+([^\\s(]+)");
 
         for (String line : lines) {
             line = line.trim();
@@ -52,21 +52,30 @@ public class SequenceDiagramParser {
                 continue;
             }
 
-            Matcher plantUmlMatcher = plantUmlPattern.matcher(line);
-            if (plantUmlMatcher.matches()) {
-                String source = plantUmlMatcher.group(1).trim();
-                String target = plantUmlMatcher.group(2).trim();
-                String action = plantUmlMatcher.group(3).trim();
+            Matcher arrowMatcher = arrowPattern.matcher(line);
+            if (arrowMatcher.matches()) {
+                String source = arrowMatcher.group(1).trim();
+                String target = arrowMatcher.group(2).trim();
+                String action = arrowMatcher.group(3).trim();
 
                 Matcher methodMatcher = methodPattern.matcher(action);
                 if (methodMatcher.find()) {
                     String method = methodMatcher.group(1);
                     String endpoint = methodMatcher.group(2);
+                    
+                    String params = "";
+                    if (action.contains("(")) {
+                        int start = action.indexOf("(");
+                        int end = action.lastIndexOf(")");
+                        if (end > start) {
+                            params = action.substring(start + 1, end);
+                        }
+                    }
 
                     ProcessStep step = ProcessStep.builder()
                         .businessProcess(process)
                         .stepId("step_" + order)
-                        .stepName(action)
+                        .stepName(method + " " + endpoint + (params.isEmpty() ? "" : " (" + params + ")"))
                         .stepOrder(order++)
                         .stepType(StepType.SERVICE_TASK)
                         .httpMethod(method)
@@ -74,18 +83,7 @@ public class SequenceDiagramParser {
                         .build();
 
                     steps.add(step);
-                    log.debug("Extracted step from sequence: {} {}", method, endpoint);
-                } else {
-                    ProcessStep step = ProcessStep.builder()
-                        .businessProcess(process)
-                        .stepId("step_" + order)
-                        .stepName(action)
-                        .stepOrder(order++)
-                        .stepType(StepType.SERVICE_TASK)
-                        .build();
-
-                    steps.add(step);
-                    log.debug("Extracted step without method: {}", action);
+                    log.debug("Extracted step: {} {}", method, endpoint);
                 }
             }
         }
@@ -98,9 +96,8 @@ public class SequenceDiagramParser {
             throw new IllegalArgumentException("Sequence diagram cannot be empty");
         }
 
-        if (!diagramText.contains("->") && 
-            !diagramText.matches("(?s).*\\b(GET|POST|PUT|DELETE|PATCH)\\b.*")) {
-            throw new IllegalArgumentException("Invalid sequence diagram format");
+        if (!diagramText.contains("->")) {
+            throw new IllegalArgumentException("Invalid sequence diagram format: no arrows found");
         }
 
         log.info("Sequence diagram validation successful");

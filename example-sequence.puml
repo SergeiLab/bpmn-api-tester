@@ -1,6 +1,0 @@
-@startuml
-Client -> API: GET /api/test
-API -> Database: SELECT data
-Database --> API: data
-API --> Client: 200 OK
-@enduml
