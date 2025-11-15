@@ -1,0 +1,30 @@
+@startuml
+actor Client as C
+participant "API Bank" as Bank
+
+C -> Bank: POST /auth/bank-token (client_id, client_secret)
+activate Bank
+Bank -> C: access_token
+deactivate Bank
+
+C -> Bank: GET /accounts
+activate Bank
+Bank -> C: list of accounts
+deactivate Bank
+
+C -> Bank: GET /accounts/{bonus_account_id}/balances
+activate Bank
+Bank -> C: balance
+deactivate Bank
+
+C -> Bank: POST /payments (bonus account, service provider)
+activate Bank
+Bank -> C: payment_id
+deactivate Bank
+
+C -> Bank: GET /payments/{payment_id}
+activate Bank
+Bank -> C: status: completed
+deactivate Bank
+
+@enduml

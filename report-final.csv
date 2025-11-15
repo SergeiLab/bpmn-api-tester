@@ -1,0 +1,5 @@
+Execution ID,Process Name,Status,Mode,Started At,Completed At
+2,Final Test BPMN 09:47:48,COMPLETED,STANDARD,2025-11-15 09:47:48,2025-11-15 09:48:00
+
+Step Order,Step Name,Status,HTTP Status,Execution Time (ms),Error Message
+1,Get Rewards Balance,SUCCESS,200,11297,

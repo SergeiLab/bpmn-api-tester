@@ -40,13 +40,15 @@ public class SequenceDiagramParser {
         int order = 0;
 
         Pattern plantUmlPattern = Pattern.compile("^\\s*(.+?)\\s*->\\s*(.+?)\\s*:\\s*(.+)$");
-        Pattern simplePattern = Pattern.compile("^\\s*(GET|POST|PUT|DELETE|PATCH)\\s+(.+)$");
+        Pattern methodPattern = Pattern.compile("(GET|POST|PUT|DELETE|PATCH)\\s+(/\\S+)");
 
         for (String line : lines) {
             line = line.trim();
             
             if (line.isEmpty() || line.startsWith("@") || line.startsWith("title") || 
-                line.startsWith("participant") || line.startsWith("//")) {
+                line.startsWith("participant") || line.startsWith("actor") || 
+                line.startsWith("//") || line.startsWith("activate") || 
+                line.startsWith("deactivate")) {
                 continue;
             }
 
@@ -56,61 +58,39 @@ public class SequenceDiagramParser {
                 String target = plantUmlMatcher.group(2).trim();
                 String action = plantUmlMatcher.group(3).trim();
 
-                ProcessStep step = parseAction(action, order++, process);
-                if (step != null) {
+                Matcher methodMatcher = methodPattern.matcher(action);
+                if (methodMatcher.find()) {
+                    String method = methodMatcher.group(1);
+                    String endpoint = methodMatcher.group(2);
+
+                    ProcessStep step = ProcessStep.builder()
+                        .businessProcess(process)
+                        .stepId("step_" + order)
+                        .stepName(action)
+                        .stepOrder(order++)
+                        .stepType(StepType.SERVICE_TASK)
+                        .httpMethod(method)
+                        .apiEndpoint(endpoint)
+                        .build();
+
                     steps.add(step);
+                    log.debug("Extracted step from sequence: {} {}", method, endpoint);
+                } else {
+                    ProcessStep step = ProcessStep.builder()
+                        .businessProcess(process)
+                        .stepId("step_" + order)
+                        .stepName(action)
+                        .stepOrder(order++)
+                        .stepType(StepType.SERVICE_TASK)
+                        .build();
+
+                    steps.add(step);
+                    log.debug("Extracted step without method: {}", action);
                 }
-                continue;
-            }
-
-            Matcher simpleMatcher = simplePattern.matcher(line);
-            if (simpleMatcher.matches()) {
-                String method = simpleMatcher.group(1);
-                String endpoint = simpleMatcher.group(2);
-
-                ProcessStep step = ProcessStep.builder()
-                    .businessProcess(process)
-                    .stepId("step_" + order)
-                    .stepName(method + " " + endpoint)
-                    .stepOrder(order++)
-                    .stepType(StepType.SERVICE_TASK)
-                    .httpMethod(method)
-                    .apiEndpoint(endpoint)
-                    .build();
-
-                steps.add(step);
             }
         }
 
         return steps;
-    }
-
-    private ProcessStep parseAction(String action, int order, BusinessProcess process) {
-        Pattern actionPattern = Pattern.compile("^\\s*(GET|POST|PUT|DELETE|PATCH)\\s+(.+)$");
-        Matcher matcher = actionPattern.matcher(action);
-
-        if (matcher.matches()) {
-            String method = matcher.group(1);
-            String endpoint = matcher.group(2);
-
-            return ProcessStep.builder()
-                .businessProcess(process)
-                .stepId("step_" + order)
-                .stepName(action)
-                .stepOrder(order)
-                .stepType(StepType.SERVICE_TASK)
-                .httpMethod(method)
-                .apiEndpoint(endpoint)
-                .build();
-        }
-
-        return ProcessStep.builder()
-            .businessProcess(process)
-            .stepId("step_" + order)
-            .stepName(action)
-            .stepOrder(order)
-            .stepType(StepType.SERVICE_TASK)
-            .build();
     }
 
     public void validateSequenceDiagram(String diagramText) {

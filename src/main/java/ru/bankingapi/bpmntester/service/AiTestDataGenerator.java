@@ -2,220 +2,299 @@ package ru.bankingapi.bpmntester.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.openai.OpenAiChatModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import ru.bankingapi.bpmntester.domain.ApiEndpointInfo;
 
 import java.util.*;
+import java.util.regex.*;
 
 @Service
 @Slf4j
 public class AiTestDataGenerator {
 
-    private final ChatLanguageModel chatModel;
     private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate;
     private final Random random = new Random();
 
-    @Value("${ai.openai.api-key}")
-    private String openAiApiKey;
+    @Value("${ai.provider:ollama}")
+    private String aiProvider;
 
-    @Value("${ai.openai.model:gpt-4-turbo-preview}")
-    private String model;
+    @Value("${ai.ollama.base-url:http://localhost:11434}")
+    private String ollamaBaseUrl;
 
-    public AiTestDataGenerator(ObjectMapper objectMapper,
-                               @Value("${ai.openai.api-key}") String apiKey) {
+    @Value("${ai.ollama.model:llama3.2:3b}")
+    private String ollamaModel;
+
+    @Value("${ai.enabled:true}")
+    private boolean aiEnabled;
+
+    public AiTestDataGenerator(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-        
-        // Initialize AI model (can be replaced with Ollama for local)
-        if (apiKey != null && !apiKey.isBlank()) {
-            this.chatModel = OpenAiChatModel.builder()
-                .apiKey(apiKey)
-                .modelName("gpt-4-turbo-preview")
-                .temperature(0.7)
-                .build();
-            log.info("AI test data generator initialized with OpenAI");
-        } else {
-            this.chatModel = null;
-            log.warn("AI model not configured, will use fallback data generation");
-        }
+        this.restTemplate = new RestTemplate();
     }
 
-    /**
-     * Generate test data for an endpoint using AI
-     */
     public Map<String, Object> generateTestData(
         ApiEndpointInfo endpointInfo,
         Map<String, Object> contextData
     ) {
-        if (chatModel != null) {
-            return generateWithAi(endpointInfo, contextData);
-        } else {
+        if (!aiEnabled) {
+            log.info("AI disabled, using fallback generation");
             return generateFallbackData(endpointInfo, contextData);
         }
+
+        if ("ollama".equals(aiProvider)) {
+            try {
+                return generateWithOllama(endpointInfo, contextData);
+            } catch (Exception e) {
+                log.warn("Ollama generation failed, using fallback: {}", e.getMessage());
+                return generateFallbackData(endpointInfo, contextData);
+            }
+        }
+
+        return generateFallbackData(endpointInfo, contextData);
     }
 
-    /**
-     * Generate test data using AI language model
-     */
-    private Map<String, Object> generateWithAi(
+    private Map<String, Object> generateWithOllama(
         ApiEndpointInfo endpointInfo,
         Map<String, Object> contextData
     ) {
         try {
             String prompt = buildGenerationPrompt(endpointInfo, contextData);
             
-            log.debug("Generating test data with AI for endpoint: {} {}", 
+            log.debug("Generating test data with Ollama for: {} {}", 
                 endpointInfo.getMethod(), endpointInfo.getPath());
 
-            String response = chatModel.generate(prompt);
-            
-            // Extract JSON from response (AI might wrap it in markdown)
-            String jsonContent = extractJsonFromResponse(response);
-            
-            Map<String, Object> generatedData = objectMapper.readValue(
-                jsonContent, 
-                Map.class
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", ollamaModel);
+            requestBody.put("prompt", prompt);
+            requestBody.put("stream", false);
+            requestBody.put("format", "json");
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                ollamaBaseUrl + "/api/generate",
+                HttpMethod.POST,
+                request,
+                String.class
             );
 
-            log.info("Successfully generated test data with AI for {}", endpointInfo.getPath());
-            return generatedData;
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode responseNode = objectMapper.readTree(response.getBody());
+                String generatedText = responseNode.get("response").asText();
+                
+                Map<String, Object> generatedData = extractJsonFromResponse(generatedText);
+                
+                if (generatedData != null && !generatedData.isEmpty()) {
+                    if (contextData != null && !contextData.isEmpty()) {
+                        contextData.forEach(generatedData::putIfAbsent);
+                    }
+                    
+                    log.info("Successfully generated test data with Ollama");
+                    return generatedData;
+                }
+            }
+
+            log.warn("Ollama returned empty data, using fallback");
+            return generateFallbackData(endpointInfo, contextData);
 
         } catch (Exception e) {
-            log.error("AI generation failed, falling back to rule-based generation", e);
+            log.error("Ollama generation failed: {}", e.getMessage());
             return generateFallbackData(endpointInfo, contextData);
         }
     }
 
-    /**
-     * Build prompt for AI model
-     */
     private String buildGenerationPrompt(
         ApiEndpointInfo endpointInfo,
         Map<String, Object> contextData
     ) {
         StringBuilder prompt = new StringBuilder();
         
-        prompt.append("Generate realistic test data for a banking API endpoint.\n\n");
+        prompt.append("Generate realistic JSON test data for a banking API endpoint.\n\n");
         prompt.append("Endpoint: ").append(endpointInfo.getMethod())
               .append(" ").append(endpointInfo.getPath()).append("\n");
-        prompt.append("Description: ").append(endpointInfo.getDescription()).append("\n\n");
         
-        if (!endpointInfo.getRequestSchema().isEmpty()) {
-            prompt.append("Request Schema:\n");
-            prompt.append(formatSchema(endpointInfo.getRequestSchema())).append("\n\n");
+        if (endpointInfo.getDescription() != null && !endpointInfo.getDescription().isEmpty()) {
+            prompt.append("Description: ").append(endpointInfo.getDescription()).append("\n");
         }
         
-        if (!endpointInfo.getRequiredFields().isEmpty()) {
-            prompt.append("Required Fields: ")
-                  .append(String.join(", ", endpointInfo.getRequiredFields()))
-                  .append("\n\n");
+        if (endpointInfo.getRequestSchema() != null && !endpointInfo.getRequestSchema().isEmpty()) {
+            prompt.append("\nExpected fields based on schema:\n");
+            extractFieldsFromSchema(endpointInfo.getRequestSchema(), prompt, "");
         }
         
-        if (!contextData.isEmpty()) {
-            prompt.append("Context from previous steps (use these values when applicable):\n");
+        if (contextData != null && !contextData.isEmpty()) {
+            prompt.append("\nContext from previous steps (MUST use these values):\n");
             contextData.forEach((key, value) -> 
                 prompt.append("  ").append(key).append(": ").append(value).append("\n")
             );
-            prompt.append("\n");
         }
         
-        prompt.append("Generate ONLY valid JSON data that matches the schema. ");
-        prompt.append("Use realistic banking data (account numbers, amounts, dates, etc.). ");
-        prompt.append("If context data contains IDs or references, use them. ");
-        prompt.append("Return ONLY the JSON object, no explanations.\n");
+        prompt.append("\nGenerate ONLY valid JSON data. Use realistic banking values:\n");
+        prompt.append("- Account numbers: 20 digits starting with 40817\n");
+        prompt.append("- Card numbers: 16 digits starting with 4276\n");
+        prompt.append("- Amounts: positive numbers with 2 decimals\n");
+        prompt.append("- Currency: RUB\n");
+        prompt.append("- Dates: ISO 8601 format\n");
+        prompt.append("\nReturn ONLY the JSON object, no explanations:");
         
         return prompt.toString();
     }
 
-    /**
-     * Fallback data generation without AI
-     */
-    private Map<String, Object> generateFallbackData(
-    ApiEndpointInfo endpointInfo,
-    Map<String, Object> contextData
-) {
-    Map<String, Object> data = new HashMap<>();
-    
-    if (contextData != null && !contextData.isEmpty()) {
-        data.putAll(contextData);
+    private void extractFieldsFromSchema(Map<String, Object> schema, StringBuilder prompt, String prefix) {
+        if (schema.containsKey("properties")) {
+            Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
+            properties.forEach((fieldName, fieldSchema) -> {
+                Map<String, Object> fieldSchemaMap = (Map<String, Object>) fieldSchema;
+                String type = (String) fieldSchemaMap.getOrDefault("type", "string");
+                String description = (String) fieldSchemaMap.get("description");
+                
+                prompt.append("  ").append(prefix).append(fieldName)
+                      .append(" (").append(type).append(")");
+                
+                if (description != null) {
+                    prompt.append(": ").append(description);
+                }
+                prompt.append("\n");
+            });
+        }
     }
-    
-    Map<String, Object> schema = endpointInfo.getRequestSchema();
-    
-    if (schema == null || schema.isEmpty()) {
-        data.putAll(generateDefaultData(endpointInfo));
-        log.info("Generated default data for {}", endpointInfo.getPath());
+
+    private Map<String, Object> extractJsonFromResponse(String response) {
+        if (response == null || response.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        response = response.trim();
+        
+        if (response.startsWith("```json")) {
+            response = response.substring(7);
+        } else if (response.startsWith("```")) {
+            response = response.substring(3);
+        }
+        
+        if (response.endsWith("```")) {
+            response = response.substring(0, response.length() - 3);
+        }
+        
+        response = response.trim();
+        
+        Pattern jsonPattern = Pattern.compile("\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\}");
+        Matcher matcher = jsonPattern.matcher(response);
+        
+        if (matcher.find()) {
+            String jsonStr = matcher.group();
+            try {
+                return objectMapper.readValue(jsonStr, Map.class);
+            } catch (Exception e) {
+                log.warn("Failed to parse extracted JSON: {}", e.getMessage());
+            }
+        }
+
+        try {
+            return objectMapper.readValue(response, Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to parse response as JSON: {}", e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    private Map<String, Object> generateFallbackData(
+        ApiEndpointInfo endpointInfo,
+        Map<String, Object> contextData
+    ) {
+        Map<String, Object> data = new HashMap<>();
+        
+        if (contextData != null && !contextData.isEmpty()) {
+            data.putAll(contextData);
+        }
+        
+        Map<String, Object> schema = endpointInfo.getRequestSchema();
+        
+        if (schema == null || schema.isEmpty()) {
+            data.putAll(generateDefaultData(endpointInfo));
+            log.info("Generated default data for {}", endpointInfo.getPath());
+            return data;
+        }
+
+        if (schema.containsKey("properties")) {
+            Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
+            
+            properties.forEach((fieldName, fieldSchema) -> {
+                if (data.containsKey(fieldName)) {
+                    return;
+                }
+
+                Object value = generateFieldValue(
+                    fieldName, 
+                    (Map<String, Object>) fieldSchema,
+                    endpointInfo.getRequiredFields() != null && 
+                    endpointInfo.getRequiredFields().contains(fieldName)
+                );
+                
+                if (value != null) {
+                    data.put(fieldName, value);
+                }
+            });
+        } else {
+            data.putAll(generateDefaultData(endpointInfo));
+        }
+
+        log.info("Generated fallback data for {}", endpointInfo.getPath());
         return data;
     }
 
-    if (schema.containsKey("properties")) {
-        Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
+    private Map<String, Object> generateDefaultData(ApiEndpointInfo endpointInfo) {
+        Map<String, Object> data = new HashMap<>();
         
-        properties.forEach((fieldName, fieldSchema) -> {
-            if (contextData != null && contextData.containsKey(fieldName)) {
-                data.put(fieldName, contextData.get(fieldName));
-                return;
+        if (endpointInfo == null || endpointInfo.getPath() == null) {
+            return data;
+        }
+
+        String path = endpointInfo.getPath();
+        
+        if (path.contains("{externalAccountID}")) {
+            data.put("externalAccountID", "40817810" + String.format("%012d", random.nextInt(1000000000)));
+        }
+        if (path.contains("{accountId}")) {
+            data.put("accountId", "40817810" + String.format("%012d", random.nextInt(1000000000)));
+        }
+        if (path.contains("{cardId}")) {
+            data.put("cardId", "4276" + String.format("%012d", random.nextInt(1000000000)));
+        }
+        if (path.contains("{transactionId}")) {
+            data.put("transactionId", "TXN" + UUID.randomUUID().toString().replace("-", "").substring(0, 15));
+        }
+        
+        if (endpointInfo.getMethod() != null) {
+            String method = endpointInfo.getMethod().toUpperCase();
+            if ("POST".equals(method) || "PUT".equals(method) || "PATCH".equals(method)) {
+                data.put("amount", random.nextInt(10000) + 100);
+                data.put("currency", "RUB");
+                data.put("description", "Test transaction");
             }
-
-            Object value = generateFieldValue(
-                fieldName, 
-                (Map<String, Object>) fieldSchema,
-                endpointInfo.getRequiredFields() != null && 
-                endpointInfo.getRequiredFields().contains(fieldName)
-            );
-            
-            if (value != null) {
-                data.put(fieldName, value);
-            }
-        });
-    } else {
-        data.putAll(generateDefaultData(endpointInfo));
+        }
+        
+        return data;
     }
 
-    log.info("Generated fallback test data for {}", endpointInfo.getPath());
-    return data;
-}
-
-private Map<String, Object> generateDefaultData(ApiEndpointInfo endpointInfo) {
-    Map<String, Object> data = new HashMap<>();
-    
-    String path = endpointInfo.getPath();
-    
-    if (path.contains("{externalAccountID}")) {
-        data.put("externalAccountID", "40817810" + String.format("%012d", random.nextInt(1000000000)));
-    }
-    if (path.contains("{accountId}")) {
-        data.put("accountId", "40817810" + String.format("%012d", random.nextInt(1000000000)));
-    }
-    if (path.contains("{cardId}")) {
-        data.put("cardId", "4276" + String.format("%012d", random.nextInt(1000000000)));
-    }
-    if (path.contains("{transactionId}")) {
-        data.put("transactionId", "TXN" + String.format("%015d", random.nextInt(1000000000)));
-    }
-    
-    if ("POST".equals(endpointInfo.getMethod()) || "PUT".equals(endpointInfo.getMethod())) {
-        data.put("amount", random.nextInt(10000) + 100);
-        data.put("currency", "RUB");
-        data.put("description", "Test transaction");
-    }
-    
-    return data;
-}
-
-    /**
-     * Generate value for a specific field
-     */
     private Object generateFieldValue(
         String fieldName, 
         Map<String, Object> schema,
         boolean isRequired
     ) {
+        if (schema == null) {
+            return generateDefaultFieldValue(fieldName);
+        }
+
         if (!isRequired && random.nextInt(10) < 3) {
-            return null; // 30% chance of null for optional fields
+            return null;
         }
 
         String type = (String) schema.getOrDefault("type", "string");
@@ -232,21 +311,36 @@ private Map<String, Object> generateDefaultData(ApiEndpointInfo endpointInfo) {
         };
     }
 
-    /**
-     * Generate string value based on field name and format
-     */
+    private Object generateDefaultFieldValue(String fieldName) {
+        String lowerName = fieldName.toLowerCase();
+        
+        if (lowerName.contains("account") && lowerName.contains("id")) {
+            return "40817810" + String.format("%012d", random.nextInt(1000000000));
+        }
+        if (lowerName.contains("card")) {
+            return "4276" + String.format("%012d", random.nextInt(1000000000));
+        }
+        if (lowerName.contains("amount")) {
+            return random.nextInt(100000) + 100;
+        }
+        if (lowerName.contains("currency")) {
+            return "RUB";
+        }
+        
+        return "test_" + fieldName;
+    }
+
     private String generateStringValue(String fieldName, String format, Map<String, Object> schema) {
         String lowerName = fieldName.toLowerCase();
 
-        // Banking-specific patterns
         if (lowerName.contains("account") && lowerName.contains("id")) {
-            return "40817810" + "%012d".formatted(random.nextInt(1000000000));
+            return "40817810" + String.format("%012d", random.nextInt(1000000000));
         }
         if (lowerName.contains("card") && lowerName.contains("number")) {
-            return "4276" + "%012d".formatted(random.nextInt(1000000000));
+            return "4276" + String.format("%012d", random.nextInt(1000000000));
         }
         if (lowerName.contains("phone")) {
-            return "+7" + "%010d".formatted(random.nextInt(1000000000));
+            return "+7" + String.format("%010d", random.nextInt(1000000000));
         }
         if (lowerName.contains("email")) {
             return "test" + random.nextInt(1000) + "@example.com";
@@ -255,9 +349,8 @@ private Map<String, Object> generateDefaultData(ApiEndpointInfo endpointInfo) {
             return String.valueOf(random.nextInt(100000) + 100);
         }
 
-        // Format-based generation
         if ("date".equals(format)) {
-            return "2024-01-" + "%02d".formatted(random.nextInt(28) + 1);
+            return "2024-" + String.format("%02d", random.nextInt(12) + 1) + "-" + String.format("%02d", random.nextInt(28) + 1);
         }
         if ("date-time".equals(format)) {
             return "2024-01-15T10:30:00Z";
@@ -266,19 +359,14 @@ private Map<String, Object> generateDefaultData(ApiEndpointInfo endpointInfo) {
             return UUID.randomUUID().toString();
         }
 
-        // Check enum values
         if (schema.containsKey("enum")) {
             List<String> enumValues = (List<String>) schema.get("enum");
             return enumValues.get(random.nextInt(enumValues.size()));
         }
 
-        // Default
         return "test_" + fieldName + "_" + random.nextInt(1000);
     }
 
-    /**
-     * Generate integer value
-     */
     private Integer generateIntegerValue(String fieldName, Map<String, Object> schema) {
         Integer min = (Integer) schema.get("minimum");
         Integer max = (Integer) schema.get("maximum");
@@ -290,30 +378,24 @@ private Map<String, Object> generateDefaultData(ApiEndpointInfo endpointInfo) {
         return random.nextInt(10000);
     }
 
-    /**
-     * Generate number value
-     */
     private Double generateNumberValue(String fieldName, Map<String, Object> schema) {
-        Double min = (Double) schema.get("minimum");
-        Double max = (Double) schema.get("maximum");
+        Number min = (Number) schema.get("minimum");
+        Number max = (Number) schema.get("maximum");
 
         if (min != null && max != null) {
-            return min + (max - min) * random.nextDouble();
+            return min.doubleValue() + (max.doubleValue() - min.doubleValue()) * random.nextDouble();
         }
 
-        return random.nextDouble() * 10000;
+        return Math.round((random.nextDouble() * 10000) * 100.0) / 100.0;
     }
 
-    /**
-     * Generate array value
-     */
     private List<Object> generateArrayValue(Map<String, Object> schema) {
         Map<String, Object> items = (Map<String, Object>) schema.get("items");
         if (items == null) {
             return Collections.emptyList();
         }
 
-        int arraySize = random.nextInt(3) + 1; // 1-3 items
+        int arraySize = random.nextInt(3) + 1;
         List<Object> array = new ArrayList<>();
 
         for (int i = 0; i < arraySize; i++) {
@@ -324,9 +406,6 @@ private Map<String, Object> generateDefaultData(ApiEndpointInfo endpointInfo) {
         return array;
     }
 
-    /**
-     * Generate object value
-     */
     private Map<String, Object> generateObjectValue(Map<String, Object> schema) {
         Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
         if (properties == null) {
@@ -344,35 +423,24 @@ private Map<String, Object> generateDefaultData(ApiEndpointInfo endpointInfo) {
         return obj;
     }
 
-    /**
-     * Extract JSON from AI response (may be wrapped in markdown)
-     */
-    private String extractJsonFromResponse(String response) {
-        response = response.trim();
-        
-        // Remove markdown code blocks
-        if (response.startsWith("```json")) {
-            response = response.substring(7);
-        } else if (response.startsWith("```")) {
-            response = response.substring(3);
+    public boolean isAiAvailable() {
+        if (!aiEnabled) {
+            return false;
         }
-        
-        if (response.endsWith("```")) {
-            response = response.substring(0, response.length() - 3);
-        }
-        
-        return response.trim();
-    }
 
-    /**
-     * Format schema for prompt
-     */
-    private String formatSchema(Map<String, Object> schema) {
-        try {
-            return objectMapper.writerWithDefaultPrettyPrinter()
-                .writeValueAsString(schema);
-        } catch (Exception e) {
-            return schema.toString();
+        if ("ollama".equals(aiProvider)) {
+            try {
+                ResponseEntity<String> response = restTemplate.getForEntity(
+                    ollamaBaseUrl + "/api/tags",
+                    String.class
+                );
+                return response.getStatusCode().is2xxSuccessful();
+            } catch (Exception e) {
+                log.warn("Ollama not available: {}", e.getMessage());
+                return false;
+            }
         }
+
+        return false;
     }
 }

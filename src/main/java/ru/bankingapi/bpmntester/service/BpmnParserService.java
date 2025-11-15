@@ -14,6 +14,8 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 @Service
 @Slf4j
@@ -98,6 +100,12 @@ public class BpmnParserService {
         String topic = task.getCamundaTopic();
         String implementation = task.getImplementation();
         
+        // Try to extract from task name (new logic)
+        String taskName = task.getName();
+        if (taskName != null && !taskName.isBlank()) {
+            parseApiInfoFromTaskName(taskName, step);
+        }
+        
         // Try to extract from documentation
         Collection<Documentation> docs = task.getDocumentations();
         if (!docs.isEmpty()) {
@@ -114,6 +122,27 @@ public class BpmnParserService {
         log.debug("Extracted API info for task {}: endpoint={}, method={}", 
             task.getId(), step.getApiEndpoint(), step.getHttpMethod());
     }
+
+    /**
+     * Parse API info from task name
+     * Expected format: "Task Name with GET /api/path"
+     */
+    private void parseApiInfoFromTaskName(String taskName, ProcessStep step) {
+        if (taskName == null || taskName.isBlank()) {
+            return;
+        }
+
+        String pattern = "(GET|POST|PUT|DELETE|PATCH)\\s+(/[^\\s]+)";
+        Pattern p = Pattern.compile(pattern);
+        Matcher m = p.matcher(taskName);
+        
+        if (m.find()) {
+            step.setHttpMethod(m.group(1));
+            step.setApiEndpoint(m.group(2));
+            log.debug("Extracted from task name: {} {}", m.group(1), m.group(2));
+        }
+    }
+
 
     /**
      * Parse API info from task documentation

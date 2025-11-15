@@ -2,6 +2,7 @@ package ru.bankingapi.bpmntester.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +30,13 @@ public class BpmnApiTesterController {
     private final TestOrchestrator testOrchestrator;
     private final SequenceDiagramParser sequenceParser;
     private final ReportExportService reportExportService;
+    private final AiTestDataGenerator aiTestDataGenerator; // <-- Поле уже присутствует
+
+    @Value("${ai.enabled:true}") // <-- Значение по умолчанию обновлено на 'true'
+    private boolean aiEnabled;
+
+    @Value("${ai.provider:none}")
+    private String aiProvider;
 
     @PostMapping("/processes/upload")
     public ResponseEntity<?> uploadProcess(
@@ -258,6 +266,36 @@ public class BpmnApiTesterController {
             .header("Content-Type", "application/json; charset=UTF-8")
             .header("Content-Disposition", "attachment; filename=report-" + id + ".json")
             .body(json);
+    }
+
+    @GetMapping("/ai/status")
+    public ResponseEntity<Map<String, Object>> getAiStatus() {
+        Map<String, Object> status = new HashMap<>();
+        
+        boolean serviceAvailable = false;
+        String effectiveProvider = "disabled";
+
+        // Проверяем, включен ли AI в конфиге
+        if (aiEnabled) {
+            try {
+                // Проверяем, доступен ли сервис AI (Ollama, OpenAI и т.д.)
+                serviceAvailable = aiTestDataGenerator.isAiAvailable();
+                effectiveProvider = serviceAvailable ? aiProvider : "error (service unavailable)";
+            } catch (Exception e) {
+                log.error("Failed to check AI status", e);
+                serviceAvailable = false;
+                effectiveProvider = "error (exception)";
+            }
+        } else {
+            serviceAvailable = false;
+            effectiveProvider = "disabled (config)";
+        }
+        
+        status.put("enabled", serviceAvailable); // true, только если включено в конфиге И сервис доступен
+        status.put("provider", effectiveProvider);
+        status.put("fallbackAvailable", true); 
+        
+        return ResponseEntity.ok(status);
     }
 
     @GetMapping("/health")

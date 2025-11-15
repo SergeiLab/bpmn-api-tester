@@ -1,0 +1,19 @@
+{
+  "mode" : "STANDARD",
+  "executionId" : 2,
+  "completedAt" : "2025-11-15T09:48:00.032722",
+  "processName" : "Final Test BPMN 09:47:48",
+  "startedAt" : "2025-11-15T09:47:48.720298",
+  "aiAnalysis" : null,
+  "steps" : [ {
+    "endpoint" : "/api/rb/rewardsPay/hackathon/v1/cards/accounts/external/{externalAccountID}/rewards/balance",
+    "method" : "GET",
+    "httpStatus" : 200,
+    "executionTimeMs" : 11297,
+    "name" : "Get Rewards Balance",
+    "errorMessage" : null,
+    "order" : 1,
+    "status" : "SUCCESS"
+  } ],
+  "status" : "COMPLETED"
+}

@@ -1,0 +1,8 @@
+# В терминале VS Code
+echo ".env" >> .gitignore
+echo "*.log" >> .gitignore
+echo "target/" >> .gitignore
+echo "logs/" >> .gitignore
+echo "*.html" >> .gitignore
+echo "*.json" >> .gitignore
+echo "*.csv" >> .gitignore
