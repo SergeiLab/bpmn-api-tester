@@ -32,11 +32,11 @@ spring:
 banking-api:
   auth-url: https://auth.bankingapi.ru/auth/realms/kubernetes/protocol/openid-connect/token
   registry-url: https://api-registry-frontend.bankingapi.ru
-  base-url: https://api.bankingapi.ru
+  base-url: https://vbank.open.bankingapi.ru
   gost-base-url: https://api.gost.bankingapi.ru:8443
   
-  client-id: ${BANKING_API_CLIENT_ID:team112}
-  client-secret: ${BANKING_API_CLIENT_SECRET:TzNr0aYAz5vWT5Dib9l7FNR59NgPrmyR}
+  client-id: team112
+  client-secret: TzNr0aYAz5vWT5Dib9l7FNR59NgPrmyR
   
   gost:
     enabled: true
