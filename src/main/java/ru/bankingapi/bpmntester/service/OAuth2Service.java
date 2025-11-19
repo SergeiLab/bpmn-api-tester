@@ -4,14 +4,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Service
@@ -19,7 +20,9 @@ import java.util.concurrent.locks.ReentrantLock;
 @RequiredArgsConstructor
 public class OAuth2Service {
 
+    @Qualifier("standardRestTemplate")
     private final RestTemplate standardRestTemplate;
+    
     private final ObjectMapper objectMapper;
 
     @Value("${banking-api.auth-url}")
@@ -39,11 +42,8 @@ public class OAuth2Service {
         tokenLock.lock();
         try {
             if (isTokenValid()) {
-                log.debug("Using cached access token");
                 return cachedAccessToken;
             }
-
-            log.info("Obtaining new access token from: {}", authUrl);
             return fetchNewAccessToken();
         } finally {
             tokenLock.unlock();
@@ -53,7 +53,6 @@ public class OAuth2Service {
     public String refreshAccessToken() {
         tokenLock.lock();
         try {
-            log.info("Forcing access token refresh");
             return fetchNewAccessToken();
         } finally {
             tokenLock.unlock();
@@ -69,26 +68,28 @@ public class OAuth2Service {
 
     private String fetchNewAccessToken() {
         try {
-            log.info("Fetching token with client_id: {}", clientId);
+            log.info("Fetching VBank client_token with client_id: {}", clientId);
             
-            if (clientId == null || clientId.isEmpty() || clientId.equals("your_client_id")) {
-                throw new RuntimeException("Client ID not configured. Set BANKING_API_CLIENT_ID environment variable.");
+            if (clientId == null || clientId.isEmpty()) {
+                throw new RuntimeException("Client ID not configured");
             }
             
-            if (clientSecret == null || clientSecret.isEmpty() || clientSecret.equals("your_client_secret")) {
-                throw new RuntimeException("Client Secret not configured. Set BANKING_API_CLIENT_SECRET environment variable.");
+            if (clientSecret == null || clientSecret.isEmpty()) {
+                throw new RuntimeException("Client Secret not configured");
             }
 
+            // VBank использует JSON body для /auth/login
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-            body.add("grant_type", "client_credentials");
-            body.add("client_id", clientId);
-            body.add("client_secret", clientSecret);
+            Map<String, String> body = new HashMap<>();
+            body.put("client_id", clientId);
+            body.put("client_secret", clientSecret);
 
-            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+            HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
 
+            log.debug("Sending auth request to VBank: {}", authUrl);
+            
             ResponseEntity<String> response = standardRestTemplate.exchange(
                 authUrl,
                 HttpMethod.POST,
@@ -99,19 +100,28 @@ public class OAuth2Service {
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode tokenResponse = objectMapper.readTree(response.getBody());
                 
+                if (!tokenResponse.has("access_token")) {
+                    throw new RuntimeException("No access_token in response");
+                }
+                
                 cachedAccessToken = tokenResponse.get("access_token").asText();
-                int expiresIn = tokenResponse.get("expires_in").asInt();
+                
+                // VBank токены живут 24 часа
+                int expiresIn = tokenResponse.has("expires_in") 
+                    ? tokenResponse.get("expires_in").asInt() 
+                    : 86400;
+                
                 tokenExpiryTime = Instant.now().plusSeconds(expiresIn);
 
-                log.info("Access token obtained successfully, expires in {} seconds", expiresIn);
+                log.info("VBank client_token obtained, valid for {} hours", expiresIn / 3600);
                 return cachedAccessToken;
             } else {
-                throw new RuntimeException("Failed to obtain access token: " + response.getStatusCode());
+                throw new RuntimeException("Failed to obtain token: HTTP " + response.getStatusCode());
             }
 
         } catch (Exception e) {
-            log.error("Error obtaining access token: {}", e.getMessage(), e);
-            throw new RuntimeException("Cannot obtain access token: " + e.getMessage(), e);
+            log.error("Error obtaining VBank token: {}", e.getMessage(), e);
+            throw new RuntimeException("Cannot obtain VBank token: " + e.getMessage(), e);
         }
     }
 

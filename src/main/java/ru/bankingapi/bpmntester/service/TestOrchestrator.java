@@ -135,7 +135,6 @@ public class TestOrchestrator {
             .build();
 
         try {
-            // Special handling for OAuth2 authentication
             if (isOAuth2Endpoint(step)) {
                 return handleOAuth2Authentication(step, context, startTime);
             }
@@ -154,7 +153,6 @@ public class TestOrchestrator {
                 }
             }
 
-            // ✅ МАППИНГ ENDPOINT
             String originalEndpoint = step.getApiEndpoint();
             String mappedEndpoint = endpointMappingService.mapEndpoint(originalEndpoint);
             
@@ -219,14 +217,18 @@ public class TestOrchestrator {
         String endpoint = step.getApiEndpoint().toLowerCase();
         String name = step.getStepName() != null ? step.getStepName().toLowerCase() : "";
         
-        return endpoint.contains("/auth/bank-token") || 
-               endpoint.contains("/auth/token") ||
-               endpoint.contains("/oauth/token") ||
-               name.contains("аутентификация") ||
-               name.contains("authentication") ||
+        // VBank auth endpoints
+        return endpoint.contains("/auth/login") ||
+               endpoint.contains("/auth/bank-token") ||
+               endpoint.equals("/auth/bank-token") ||
                name.contains("auth");
     }
 
+    /**
+     * Handles the OAuth2 authentication step by obtaining an access token
+     * and simulating a successful response, then adding the token to the context.
+     * Note: This method no longer hardcodes client_id and client_secret in requestData.
+     */
     private StepExecutionResult handleOAuth2Authentication(
         ProcessStep step,
         Map<String, Object> context,
@@ -242,13 +244,16 @@ public class TestOrchestrator {
             .build();
 
         try {
+            // Use the injected OAuth2Service to get the actual access token
             String accessToken = oauth2Service.getAccessToken();
             
+            // Prepare request data (simulating a client_credentials flow request body, 
+            // but without hardcoded or unnecessary sensitive data since the token is already obtained)
             Map<String, Object> requestData = new HashMap<>();
             requestData.put("grant_type", "client_credentials");
-            requestData.put("client_id", "team112");
-            requestData.put("client_secret", "***hidden***");
+            // Removed hardcoded client_id and client_secret as per request/cleanup
             
+            // Simulate the successful response payload
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("access_token", accessToken.substring(0, Math.min(50, accessToken.length())) + "...");
             responseData.put("token_type", "Bearer");
@@ -258,6 +263,7 @@ public class TestOrchestrator {
             result.setResponsePayload(objectMapper.writeValueAsString(responseData));
             result.setHttpStatusCode(200);
             
+            // Add the real access token to the execution context for subsequent steps
             context.put("access_token", accessToken);
             
             log.info("OAuth2 authentication successful");
@@ -383,6 +389,9 @@ public class TestOrchestrator {
                 summary.append("Status: ").append(r.getStatus()).append("\n");
                 if (r.getErrorMessage() != null) {
                     summary.append("Error: ").append(r.getErrorMessage()).append("\n");
+                }
+                if (r.getValidationErrors() != null) {
+                    summary.append("Validation Errors: ").append(r.getValidationErrors()).append("\n");
                 }
                 summary.append("\n");
             });

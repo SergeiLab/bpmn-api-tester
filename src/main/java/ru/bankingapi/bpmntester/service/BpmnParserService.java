@@ -13,7 +13,7 @@ import ru.bankingapi.bpmntester.domain.*;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.regex.*; // Добавлен импорт
+import java.util.regex.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,9 +21,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BpmnParserService {
 
-    /**
-     * Parse BPMN XML and extract process steps
-     */
     public BusinessProcess parseBpmnXml(String bpmnXml, String processName) {
         try {
             BpmnModelInstance modelInstance = Bpmn.readModelFromStream(
@@ -45,16 +42,26 @@ public class BpmnParserService {
                 .steps(new ArrayList<>())
                 .build();
 
-            // Извлечение всех типов задач
             List<ProcessStep> steps = new ArrayList<>();
-            steps.addAll(extractServiceTasks(bpmnProcess, businessProcess));
-            steps.addAll(extractRegularTasks(bpmnProcess, businessProcess)); // Добавлено
             
-            // Сортировка всех шагов после их извлечения
+            steps.addAll(extractServiceTasks(bpmnProcess, businessProcess));
+            
+            List<ProcessStep> regularTasks = extractRegularTasks(bpmnProcess, businessProcess);
+            steps.addAll(regularTasks);
+            
+            log.info("Extracted ServiceTasks: {}, RegularTasks: {}", 
+                extractServiceTasks(bpmnProcess, businessProcess).size(),
+                regularTasks.size());
+            
+            if (steps.isEmpty()) {
+                log.warn("No tasks found in standard way, trying all FlowNodes");
+                steps.addAll(extractAllFlowNodes(bpmnProcess, businessProcess));
+            }
+            
             steps = sortByProcessFlow(steps, bpmnProcess);
             businessProcess.setSteps(steps);
 
-            log.info("Parsed BPMN process '{}' with {} tasks", // Обновлен лог
+            log.info("Parsed BPMN process '{}' with {} tasks", 
                 businessProcess.getName(), steps.size());
 
             return businessProcess;
@@ -65,15 +72,12 @@ public class BpmnParserService {
         }
     }
 
-    /**
-     * Extract service tasks from BPMN process
-     */
     private List<ProcessStep> extractServiceTasks(Process process, BusinessProcess businessProcess) {
         Collection<ServiceTask> serviceTasks = process.getModelInstance()
             .getModelElementsByType(ServiceTask.class);
 
         List<ProcessStep> steps = new ArrayList<>();
-        int order = 0; // Временный порядок, будет перезаписан sortByProcessFlow
+        int order = 0;
 
         for (ServiceTask task : serviceTasks) {
             ProcessStep step = ProcessStep.builder()
@@ -84,7 +88,6 @@ public class BpmnParserService {
                 .stepType(StepType.SERVICE_TASK)
                 .build();
 
-            // Extract API endpoint info from task attributes
             extractApiInfo(task, step);
             
             steps.add(step);
@@ -92,22 +95,17 @@ public class BpmnParserService {
             log.debug("Extracted service task: {} ({})", step.getStepName(), step.getStepId());
         }
 
-        // Сортировка удалена, будет выполнена в parseBpmnXml
         return steps;
     }
 
-    /**
-     * Extract regular tasks (non-service tasks) from BPMN process
-     */
     private List<ProcessStep> extractRegularTasks(Process process, BusinessProcess businessProcess) {
         Collection<Task> tasks = process.getModelInstance()
             .getModelElementsByType(Task.class);
 
         List<ProcessStep> steps = new ArrayList<>();
-        int order = 0; // Временный порядок, будет перезаписан sortByProcessFlow
+        int order = 0;
 
         for (Task task : tasks) {
-            // Пропускаем ServiceTask, так как они обрабатываются отдельно
             if (task instanceof ServiceTask) {
                 continue;
             }
@@ -117,14 +115,10 @@ public class BpmnParserService {
                 .stepId(task.getId())
                 .stepName(task.getName())
                 .stepOrder(order++)
-                // ПРИМЕЧАНИЕ: Вы указали SERVICE_TASK. Возможно, здесь должен быть StepType.TASK?
-                // Оставляю как в вашем примере:
-                .stepType(StepType.SERVICE_TASK) 
+                .stepType(StepType.SERVICE_TASK)
                 .build();
 
-            // Пытаемся извлечь API из имени (как в вашем примере)
             extractApiInfoFromTaskName(task.getName(), step);
-            // Пытаемся извлечь API из документации и расширений
             extractApiInfo(task, step);
             
             steps.add(step);
@@ -135,27 +129,55 @@ public class BpmnParserService {
         return steps;
     }
 
+    private List<ProcessStep> extractAllFlowNodes(Process process, BusinessProcess businessProcess) {
+        Collection<FlowNode> flowNodes = process.getModelInstance()
+            .getModelElementsByType(FlowNode.class);
 
-    /**
-     * Extract API endpoint information from BPMN task (generalized for FlowNode)
-     */
+        List<ProcessStep> steps = new ArrayList<>();
+        int order = 0;
+
+        for (FlowNode node : flowNodes) {
+            if (node instanceof StartEvent || node instanceof EndEvent || node instanceof Gateway) {
+                continue;
+            }
+            
+            String name = node.getName();
+            if (name == null || name.isEmpty()) {
+                continue;
+            }
+
+            ProcessStep step = ProcessStep.builder()
+                .businessProcess(businessProcess)
+                .stepId(node.getId())
+                .stepName(name)
+                .stepOrder(order++)
+                .stepType(StepType.SERVICE_TASK)
+                .build();
+
+            extractApiInfoFromTaskName(name, step);
+            
+            if (node instanceof FlowNode) {
+                extractApiInfo((FlowNode)node, step);
+            }
+            
+            steps.add(step);
+            log.debug("Extracted FlowNode: {} ({})", step.getStepName(), step.getStepId());
+        }
+
+        return steps;
+    }
+
     private void extractApiInfo(FlowNode task, ProcessStep step) {
-        // ServiceTask-specific logic (if any)
         if (task instanceof ServiceTask) {
             ServiceTask serviceTask = (ServiceTask) task;
-            String topic = serviceTask.getCamundaTopic();
-            String implementation = serviceTask.getImplementation();
-            // (в данный момент topic/implementation не используются в ProcessStep)
         }
         
-        // Try to extract from documentation
         Collection<Documentation> docs = task.getDocumentations();
         if (!docs.isEmpty()) {
             String docText = docs.iterator().next().getTextContent();
             parseApiInfoFromDocumentation(docText, step);
         }
 
-        // Try to extract from extension elements
         ExtensionElements extensions = task.getExtensionElements();
         if (extensions != null) {
             parseApiInfoFromExtensions(extensions, step);
@@ -165,16 +187,11 @@ public class BpmnParserService {
             task.getId(), step.getApiEndpoint(), step.getHttpMethod());
     }
 
-    /**
-     * Parse API info from task name
-     * Expected format: "Task Name with GET /api/path" or "Task Name: GET /api/path"
-     */
     private void extractApiInfoFromTaskName(String taskName, ProcessStep step) {
         if (taskName == null || taskName.isEmpty()) {
             return;
         }
 
-        // Паттерн: "Описание: GET /endpoint" или "Описание: POST /endpoint"
         Pattern colonPattern = Pattern.compile(":\\s*(GET|POST|PUT|DELETE|PATCH)\\s+(/[^\\s]*)");
         Matcher colonMatcher = colonPattern.matcher(taskName);
 
@@ -185,11 +202,10 @@ public class BpmnParserService {
             step.setHttpMethod(method);
             step.setApiEndpoint(endpoint);
             
-            log.debug("Extracted from task name: {} {}", method, endpoint);
+            log.debug("Extracted from task name (colon): {} {}", method, endpoint);
             return;
         }
 
-        // Паттерн: "GET /endpoint" в начале или середине строки
         Pattern simplePattern = Pattern.compile("(GET|POST|PUT|DELETE|PATCH)\\s+(/[^\\s]*)");
         Matcher simpleMatcher = simplePattern.matcher(taskName);
 
@@ -204,11 +220,6 @@ public class BpmnParserService {
         }
     }
 
-
-    /**
-     * Parse API info from task documentation
-     * Expected format: "GET /api/path" or "endpoint: /api/path, method: POST"
-     */
     private void parseApiInfoFromDocumentation(String documentation, ProcessStep step) {
         if (documentation == null || documentation.isBlank()) {
             return;
@@ -218,7 +229,6 @@ public class BpmnParserService {
         for (String line : lines) {
             line = line.trim();
             
-            // Pattern: "GET /api/path"
             if (line.matches("^(GET|POST|PUT|DELETE|PATCH)\\s+/.+")) {
                 String[] parts = line.split("\\s+", 2);
                 step.setHttpMethod(parts[0]);
@@ -226,13 +236,11 @@ public class BpmnParserService {
                 return;
             }
             
-            // Pattern: "endpoint: /api/path"
             if (line.toLowerCase().startsWith("endpoint:")) {
                 String endpoint = line.substring("endpoint:".length()).trim();
                 step.setApiEndpoint(endpoint);
             }
             
-            // Pattern: "method: POST"
             if (line.toLowerCase().startsWith("method:")) {
                 String method = line.substring("method:".length()).trim();
                 step.setHttpMethod(method.toUpperCase());
@@ -240,11 +248,7 @@ public class BpmnParserService {
         }
     }
 
-    /**
-     * Parse API info from BPMN extension elements
-     */
     private void parseApiInfoFromExtensions(ExtensionElements extensions, ProcessStep step) {
-        // Look for custom properties
         extensions.getElementsQuery()
             .filterByType(CamundaProperty.class)
             .list()
@@ -262,62 +266,69 @@ public class BpmnParserService {
             });
     }
 
-    /**
-     * Sort steps by process flow sequence
-     */
     private List<ProcessStep> sortByProcessFlow(List<ProcessStep> steps, Process process) {
-        // Get all sequence flows
-        Collection<SequenceFlow> flows = process.getModelInstance()
-            .getModelElementsByType(SequenceFlow.class);
-
-        // Build adjacency map
-        Map<String, String> flowMap = flows.stream()
-            .collect(Collectors.toMap(
-                flow -> flow.getSource().getId(),
-                flow -> flow.getTarget().getId(),
-                (a, b) -> a // Keep first in case of duplicates
-            ));
-
-        // Find start event
-        StartEvent startEvent = process.getModelInstance()
-            .getModelElementsByType(StartEvent.class)
-            .stream()
-            .findFirst()
-            .orElse(null);
-
-        if (startEvent == null) {
-            log.warn("No start event found, returning steps as-is");
+        if (steps.isEmpty()) {
             return steps;
         }
 
-        // Traverse flow and reorder steps
+        Collection<SequenceFlow> flows = process.getModelInstance()
+            .getModelElementsByType(SequenceFlow.class);
+
+        Map<String, String> flowMap = new HashMap<>();
+        for (SequenceFlow flow : flows) {
+            if (flow.getSource() != null && flow.getTarget() != null) {
+                flowMap.put(flow.getSource().getId(), flow.getTarget().getId());
+            }
+        }
+
+        Collection<StartEvent> startEvents = process.getModelInstance()
+            .getModelElementsByType(StartEvent.class);
+        
+        StartEvent startEvent = startEvents.stream().findFirst().orElse(null);
+
+        if (startEvent == null) {
+            log.warn("No start event found, returning steps as-is");
+            for (int i = 0; i < steps.size(); i++) {
+                steps.get(i).setStepOrder(i);
+            }
+            return steps;
+        }
+
         List<ProcessStep> orderedSteps = new ArrayList<>();
         String currentId = startEvent.getId();
         Set<String> visited = new HashSet<>();
+        int maxIterations = steps.size() * 2;
+        int iterations = 0;
 
-        while (currentId != null && !visited.contains(currentId)) {
+        while (currentId != null && !visited.contains(currentId) && iterations < maxIterations) {
             visited.add(currentId);
+            iterations++;
             
             final String searchId = currentId;
-            steps.stream()
+            Optional<ProcessStep> foundStep = steps.stream()
                 .filter(step -> step.getStepId().equals(searchId))
-                .findFirst()
-                .ifPresent(orderedSteps::add);
+                .findFirst();
+            
+            if (foundStep.isPresent()) {
+                orderedSteps.add(foundStep.get());
+            }
 
             currentId = flowMap.get(currentId);
         }
 
-        // Переназначаем порядок для *добавленных* шагов
+        for (ProcessStep step : steps) {
+            if (!orderedSteps.contains(step)) {
+                orderedSteps.add(step);
+            }
+        }
+
         for (int i = 0; i < orderedSteps.size(); i++) {
             orderedSteps.get(i).setStepOrder(i);
         }
 
-        return orderedSteps.isEmpty() ? steps : orderedSteps;
+        return orderedSteps;
     }
 
-    /**
-     * Extract process description
-     */
     private String extractProcessDescription(Process process) {
         Collection<Documentation> docs = process.getDocumentations();
         if (!docs.isEmpty()) {
@@ -326,9 +337,6 @@ public class BpmnParserService {
         return "No description provided";
     }
 
-    /**
-     * Validate BPMN XML structure
-     */
     public void validateBpmnXml(String bpmnXml) {
         try {
             BpmnModelInstance modelInstance = Bpmn.readModelFromStream(

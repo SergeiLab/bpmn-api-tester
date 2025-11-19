@@ -19,18 +19,19 @@ public class EndpointMappingService {
     }
 
     private void initializeMappings() {
-        // Auth
-        endpointMappings.put("/auth/bank-token", "/auth/realms/kubernetes/protocol/openid-connect/token");
+        // Auth - VBank endpoints
+        // Маппим абстрактный вызов получения токена на реальный эндпоинт для client_token
+        endpointMappings.put("/auth/bank-token", "/auth/login"); 
         
-        // Accounts - попробуем найти правильный путь
-        endpointMappings.put("/accounts", "/api/v1/accounts");
-        endpointMappings.put("/accounts/{account_id}/balances", "/api/v1/accounts/{account_id}/balances");
+        // Accounts
+        endpointMappings.put("/accounts", "/accounts");
+        endpointMappings.put("/accounts/{account_id}/balances", "/accounts/{account_id}/balances");
         
         // Payments
-        endpointMappings.put("/payments", "/api/v1/payments");
-        endpointMappings.put("/payments/{payment_id}", "/api/v1/payments/{payment_id}");
+        endpointMappings.put("/payments", "/payments");
+        endpointMappings.put("/payments/{payment_id}", "/payments/{payment_id}");
         
-        log.info("Initialized {} endpoint mappings", endpointMappings.size());
+        log.info("Initialized {} VBank endpoint mappings", endpointMappings.size());
     }
 
     public String mapEndpoint(String originalEndpoint) {
@@ -38,27 +39,29 @@ public class EndpointMappingService {
             return originalEndpoint;
         }
 
-        // Точное совпадение
+        // Прямое совпадение
         if (endpointMappings.containsKey(originalEndpoint)) {
             String mapped = endpointMappings.get(originalEndpoint);
             log.debug("Mapped endpoint: {} -> {}", originalEndpoint, mapped);
             return mapped;
         }
 
-        // Проверка паттернов с параметрами
+        // Совпадение по шаблонам (для path variables)
         for (Map.Entry<String, String> entry : endpointMappings.entrySet()) {
             String pattern = entry.getKey();
             String replacement = entry.getValue();
-            
+
             if (pattern.contains("{")) {
+                // Превращаем шаблон вида /accounts/{id}/balances в regex
                 String regexPattern = pattern.replaceAll("\\{[^}]+\\}", "([^/]+)");
                 regexPattern = "^" + regexPattern + "$";
-                
+
                 Pattern p = Pattern.compile(regexPattern);
                 Matcher m = p.matcher(originalEndpoint);
-                
+
                 if (m.matches()) {
                     String result = replacement;
+                    // Подставляем захваченные группы обратно в шаблон
                     for (int i = 1; i <= m.groupCount(); i++) {
                         result = result.replaceFirst("\\{[^}]+\\}", m.group(i));
                     }

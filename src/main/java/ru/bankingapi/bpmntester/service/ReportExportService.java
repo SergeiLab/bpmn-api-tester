@@ -115,6 +115,40 @@ public class ReportExportService {
         
         html.append("    </div>\n");
         
+        if (execution.getStatus() == ExecutionStatus.FAILED) {
+            html.append("    <div class='recommendations'>\n");
+            html.append("      <h2>Recommendations</h2>\n");
+            html.append("      <ul>\n");
+            
+            execution.getStepResults().stream()
+                .filter(r -> r.getStatus() != StepStatus.SUCCESS)
+                .forEach(r -> {
+                    html.append("        <li><strong>").append(escapeHtml(r.getProcessStep().getStepName())).append(":</strong> ");
+                    
+                    if (r.getHttpStatusCode() != null) {
+                        if (r.getHttpStatusCode() == 401 || r.getHttpStatusCode() == 403) {
+                            html.append("Check authentication credentials and access permissions");
+                        } else if (r.getHttpStatusCode() == 404) {
+                            html.append("Verify endpoint URL and check if resource exists");
+                        } else if (r.getHttpStatusCode() == 400) {
+                            html.append("Review request payload format and required fields");
+                        } else if (r.getHttpStatusCode() >= 500) {
+                            html.append("Server error - contact API provider or check service health");
+                        } else {
+                            html.append("Review request parameters and API documentation");
+                        }
+                    } else if (r.getErrorMessage() != null && r.getErrorMessage().contains("timeout")) {
+                        html.append("Increase timeout settings or check network connectivity");
+                    } else {
+                        html.append("Check error message details and review step configuration");
+                    }
+                    html.append("</li>\n");
+                });
+            
+            html.append("      </ul>\n");
+            html.append("    </div>\n");
+        }
+        
         if (execution.getAiAnalysis() != null && !execution.getAiAnalysis().isEmpty()) {
             html.append("    <div class='ai-analysis'>\n");
             html.append("      <h2>AI Analysis</h2>\n");
@@ -227,6 +261,10 @@ public class ReportExportService {
             details { margin-top: 10px; }
             summary { cursor: pointer; color: #667eea; font-weight: 600; padding: 8px; background: #eef2ff; border-radius: 4px; }
             pre { background: #1f2937; color: #f3f4f6; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 12px; margin-top: 8px; }
+            .recommendations { padding: 30px; background: #fffbeb; border-top: 1px solid #e5e7eb; }
+            .recommendations h2 { color: #1f2937; margin-bottom: 15px; }
+            .recommendations ul { list-style: none; padding-left: 0; }
+            .recommendations li { padding: 12px; margin-bottom: 8px; background: white; border-left: 4px solid #f59e0b; border-radius: 4px; }
             .ai-analysis { padding: 30px; background: #f0f9ff; border-top: 1px solid #e5e7eb; }
             .ai-analysis h2 { color: #1f2937; margin-bottom: 15px; }
             .ai-analysis p { color: #374151; line-height: 1.6; }

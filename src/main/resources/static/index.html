@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BPMN API Tester</title>
+    <title>BPMN API Tester - VTB Hackathon 2025</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,7 @@
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0066CC 0%, #003366 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -24,12 +24,20 @@
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             padding: 40px;
-            max-width: 800px;
+            max-width: 1000px;
             width: 100%;
         }
-        h1 {
-            color: #667eea;
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
             margin-bottom: 10px;
+        }
+        .logo {
+            font-size: 3em;
+        }
+        h1 {
+            color: #0066CC;
             font-size: 2.5em;
         }
         .subtitle {
@@ -37,25 +45,36 @@
             margin-bottom: 30px;
             font-size: 1.1em;
         }
+        .status-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
         .status {
             background: #10b981;
             color: white;
-            padding: 15px 25px;
-            border-radius: 10px;
-            display: inline-block;
+            padding: 12px 20px;
+            border-radius: 8px;
             font-weight: bold;
-            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+        .status.warning {
+            background: #f59e0b;
         }
         .section {
             background: #f8fafc;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 25px;
+            border-radius: 12px;
             margin-bottom: 20px;
+            border: 2px solid #e2e8f0;
         }
         .section h2 {
             color: #334155;
             margin-bottom: 15px;
-            font-size: 1.3em;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .upload-form {
             display: flex;
@@ -69,7 +88,7 @@
             font-size: 1em;
         }
         button {
-            background: #667eea;
+            background: #0066CC;
             color: white;
             border: none;
             padding: 15px 30px;
@@ -80,16 +99,24 @@
             transition: all 0.3s;
         }
         button:hover {
-            background: #5568d3;
+            background: #0052A3;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 5px 15px rgba(0, 102, 204, 0.4);
         }
-        .process-list {
+        button.secondary {
+            background: #64748b;
+        }
+        button.secondary:hover {
+            background: #475569;
+        }
+        .catalog {
             display: flex;
             flex-direction: column;
             gap: 10px;
+            max-height: 400px;
+            overflow-y: auto;
         }
-        .process-item {
+        .catalog-item {
             background: white;
             padding: 15px;
             border-radius: 8px;
@@ -97,18 +124,29 @@
             cursor: pointer;
             transition: all 0.3s;
         }
-        .process-item:hover {
-            border-color: #667eea;
+        .catalog-item:hover {
+            border-color: #0066CC;
             transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,102,204,0.2);
         }
-        .process-name {
+        .item-title {
             font-weight: bold;
             color: #334155;
             margin-bottom: 5px;
+            font-size: 1.1em;
         }
-        .process-info {
+        .item-info {
             color: #64748b;
             font-size: 0.9em;
+        }
+        .item-badge {
+            display: inline-block;
+            background: #0066CC;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-right: 5px;
         }
         .api-links {
             display: flex;
@@ -116,16 +154,17 @@
             flex-wrap: wrap;
         }
         .api-link {
-            background: #f1f5f9;
-            padding: 8px 15px;
+            background: #e0f2fe;
+            padding: 10px 16px;
             border-radius: 6px;
             text-decoration: none;
-            color: #475569;
+            color: #0066CC;
             font-size: 0.9em;
+            font-weight: 600;
             transition: all 0.3s;
         }
         .api-link:hover {
-            background: #667eea;
+            background: #0066CC;
             color: white;
         }
         #result {
@@ -134,6 +173,7 @@
             border-radius: 8px;
             margin-top: 15px;
             display: none;
+            border-left: 4px solid #10b981;
         }
         .success {
             color: #10b981;
@@ -143,32 +183,100 @@
             color: #ef4444;
             font-weight: bold;
         }
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0066CC;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: #e2e8f0;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tab.active {
+            background: #0066CC;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 BPMN API Tester</h1>
-        <p class="subtitle">AI-Powered Business Process Testing with GOST Support</p>
+        <div class="header">
+            <div class="logo">🚀</div>
+            <div>
+                <h1>BPMN API Tester</h1>
+                <p class="subtitle">AI-Powered Business Process Testing | Team team112</p>
+            </div>
+        </div>
         
-        <div class="status">✅ Backend is Running</div>
+        <div class="status-bar">
+            <div class="status" id="backendStatus">⏳ Checking...</div>
+            <div class="status warning" id="aiStatus">⏳ Checking AI...</div>
+        </div>
 
         <!-- Upload Section -->
         <div class="section">
-            <h2>📤 Upload BPMN Process</h2>
-            <form class="upload-form" id="uploadForm">
-                <input type="text" id="processName" placeholder="Process Name (optional)" />
-                <input type="file" id="bpmnFile" accept=".bpmn,.xml" required />
-                <button type="submit">Upload Process</button>
-            </form>
+            <h2>📤 Upload Process</h2>
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('bpmn')">BPMN</div>
+                <div class="tab" onclick="switchTab('sequence')">Sequence Diagram</div>
+            </div>
+            
+            <div id="bpmn-tab" class="tab-content active">
+                <form class="upload-form" id="uploadBpmnForm">
+                    <input type="text" id="bpmnProcessName" placeholder="Process Name (optional)" />
+                    <input type="file" id="bpmnFile" accept=".bpmn,.xml" required />
+                    <button type="submit">Upload BPMN</button>
+                </form>
+            </div>
+            
+            <div id="sequence-tab" class="tab-content">
+                <form class="upload-form" id="uploadSequenceForm">
+                    <input type="text" id="seqProcessName" placeholder="Process Name (optional)" />
+                    <input type="file" id="sequenceFile" accept=".puml,.txt" required />
+                    <button type="submit">Upload Sequence</button>
+                </form>
+            </div>
+            
             <div id="result"></div>
         </div>
 
-        <!-- Processes List -->
+        <!-- Process Catalog -->
         <div class="section">
-            <h2>📋 Business Processes</h2>
-            <button onclick="loadProcesses()" style="margin-bottom: 15px;">🔄 Refresh List</button>
-            <div class="process-list" id="processList">
-                <p style="color: #64748b;">Click "Refresh List" to load processes...</p>
+            <h2>📋 Process Catalog</h2>
+            <button onclick="loadProcesses()" class="secondary">🔄 Refresh</button>
+            <div class="catalog" id="processList" style="margin-top: 15px;">
+                <p style="color: #64748b;">Click "Refresh" to load processes...</p>
+            </div>
+        </div>
+
+        <!-- Test Data Catalog -->
+        <div class="section">
+            <h2>🗂️ Test Data Templates</h2>
+            <button onclick="loadTemplates()" class="secondary">🔄 Load Templates</button>
+            <div class="catalog" id="templatesList" style="margin-top: 15px;">
+                <p style="color: #64748b;">Click "Load Templates" to view available data...</p>
             </div>
         </div>
 
@@ -177,100 +285,151 @@
             <h2>🔌 API Endpoints</h2>
             <div class="api-links">
                 <a href="/api/v1/health" target="_blank" class="api-link">Health Check</a>
-                <a href="/api/v1/processes" target="_blank" class="api-link">List Processes</a>
-                <a href="/h2-console" target="_blank" class="api-link">H2 Database Console</a>
+                <a href="/api/v1/ai/status" target="_blank" class="api-link">AI Status</a>
+                <a href="/api/v1/processes" target="_blank" class="api-link">Processes</a>
+                <a href="/api/v1/test-data/templates" target="_blank" class="api-link">Test Data</a>
+                <a href="/h2-console" target="_blank" class="api-link">Database</a>
             </div>
-        </div>
-
-        <!-- Credentials Info -->
-        <div class="section">
-            <h2>🔐 Configuration</h2>
-            <p style="color: #64748b; line-height: 1.6;">
-                <strong>Team:</strong> team112<br>
-                <strong>Mode:</strong> Standard (GOST available)<br>
-                <strong>AI:</strong> Enabled (with fallback)<br>
-                <strong>Database:</strong> H2 In-Memory
-            </p>
         </div>
     </div>
 
     <script>
-        // Upload form handler
-        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + '-tab').classList.add('active');
+        }
+
+        // Upload BPMN
+        document.getElementById('uploadBpmnForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+            await uploadFile('/api/v1/processes/upload', 'bpmn', 'bpmnFile', 'bpmnProcessName');
+        });
+
+        // Upload Sequence
+        document.getElementById('uploadSequenceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await uploadFile('/api/v1/processes/upload-sequence', 'sequence', 'sequenceFile', 'seqProcessName');
+        });
+
+        async function uploadFile(endpoint, fileParam, fileId, nameId) {
             const formData = new FormData();
-            const bpmnFile = document.getElementById('bpmnFile').files[0];
-            const processName = document.getElementById('processName').value;
+            const file = document.getElementById(fileId).files[0];
+            const name = document.getElementById(nameId).value;
             
-            formData.append('bpmn', bpmnFile);
-            if (processName) {
-                formData.append('name', processName);
-            }
+            formData.append(fileParam, file);
+            if (name) formData.append('name', name);
             
             const resultDiv = document.getElementById('result');
             resultDiv.style.display = 'block';
-            resultDiv.innerHTML = '<p>Uploading...</p>';
+            resultDiv.innerHTML = '<div class="loading"></div> Uploading...';
             
             try {
-                const response = await fetch('/api/v1/processes/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                
+                const response = await fetch(endpoint, { method: 'POST', body: formData });
                 const data = await response.json();
                 
                 if (response.ok) {
-                    resultDiv.innerHTML = `<p class="success">✅ ${data.message}</p>
-                                         <p>Process ID: ${data.id}</p>
-                                         <p>Steps: ${data.steps}</p>`;
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ ${data.message}</p>
+                        <p><strong>Process ID:</strong> ${data.id}</p>
+                        <p><strong>Steps:</strong> ${data.steps}</p>
+                    `;
                     loadProcesses();
                 } else {
-                    resultDiv.innerHTML = `<p class="error">❌ Error: ${data.error}</p>`;
+                    resultDiv.innerHTML = `<p class="error">❌ ${data.error}</p>`;
                 }
             } catch (error) {
-                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+                resultDiv.innerHTML = `<p class="error">❌ ${error.message}</p>`;
             }
-        });
+        }
 
         // Load processes
         async function loadProcesses() {
             const listDiv = document.getElementById('processList');
-            listDiv.innerHTML = '<p style="color: #64748b;">Loading...</p>';
+            listDiv.innerHTML = '<div class="loading"></div> Loading...';
             
             try {
                 const response = await fetch('/api/v1/processes');
                 const processes = await response.json();
                 
                 if (processes.length === 0) {
-                    listDiv.innerHTML = '<p style="color: #64748b;">No processes uploaded yet. Upload a BPMN file to get started!</p>';
+                    listDiv.innerHTML = '<p style="color: #64748b;">No processes yet. Upload a BPMN or Sequence file!</p>';
                     return;
                 }
                 
                 listDiv.innerHTML = processes.map(p => `
-                    <div class="process-item" onclick="executeTest(${p.id})">
-                        <div class="process-name">${p.name}</div>
-                        <div class="process-info">${p.steps} steps • Created: ${new Date(p.createdAt).toLocaleString()}</div>
+                    <div class="catalog-item" onclick="showProcess(${p.id})">
+                        <div class="item-title">
+                            <span class="item-badge">ID: ${p.id}</span>
+                            ${p.name}
+                        </div>
+                        <div class="item-info">
+                            ${p.steps} steps • Created: ${new Date(p.createdAt).toLocaleString()}
+                        </div>
                     </div>
                 `).join('');
             } catch (error) {
-                listDiv.innerHTML = `<p class="error">Error loading processes: ${error.message}</p>`;
+                listDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
             }
         }
 
-        // Execute test (placeholder)
-        function executeTest(processId) {
-            alert(`To execute test for process ${processId}:\n\nUse API: POST /api/v1/processes/${processId}/execute\n\nBody:\n{\n  "mode": "STANDARD",\n  "generateTestData": true,\n  "initialContext": {}\n}`);
+        // Load templates
+        async function loadTemplates() {
+            const listDiv = document.getElementById('templatesList');
+            listDiv.innerHTML = '<div class="loading"></div> Loading...';
+            
+            try {
+                const response = await fetch('/api/v1/test-data/templates');
+                const templates = await response.json();
+                
+                const entries = Object.entries(templates);
+                if (entries.length === 0) {
+                    listDiv.innerHTML = '<p style="color: #64748b;">No templates available.</p>';
+                    return;
+                }
+                
+                listDiv.innerHTML = entries.map(([key, value]) => `
+                    <div class="catalog-item">
+                        <div class="item-title">
+                            <span class="item-badge">${key}</span>
+                        </div>
+                        <div class="item-info">
+                            ${Object.entries(value).map(([k, v]) => `${k}: ${v}`).join(' • ')}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                listDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
         }
 
-        // Check backend health on load
+        function showProcess(id) {
+            alert(`Process ID: ${id}\n\nTo execute test:\nPOST /api/v1/processes/${id}/execute\n\nBody:\n{\n  "mode": "STANDARD",\n  "generateTestData": true\n}`);
+        }
+
+        // Check status on load
         window.addEventListener('load', async () => {
             try {
-                const response = await fetch('/api/v1/health');
-                const data = await response.json();
-                console.log('Backend health:', data);
-            } catch (error) {
-                console.error('Backend check failed:', error);
+                const health = await fetch('/api/v1/health').then(r => r.json());
+                document.getElementById('backendStatus').innerHTML = '✅ ' + health.status;
+                document.getElementById('backendStatus').classList.remove('warning');
+            } catch {
+                document.getElementById('backendStatus').innerHTML = '❌ Offline';
+                document.getElementById('backendStatus').classList.add('error');
+            }
+
+            try {
+                const ai = await fetch('/api/v1/ai/status').then(r => r.json());
+                if (ai.enabled) {
+                    document.getElementById('aiStatus').innerHTML = '🤖 AI: ' + ai.provider;
+                    document.getElementById('aiStatus').classList.remove('warning');
+                } else {
+                    document.getElementById('aiStatus').innerHTML = '⚠️ AI: Fallback Mode';
+                }
+            } catch {
+                document.getElementById('aiStatus').innerHTML = '❌ AI: Error';
             }
         });
     </script>

@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -30,15 +31,16 @@ public class BpmnApiTesterController {
     private final TestOrchestrator testOrchestrator;
     private final SequenceDiagramParser sequenceParser;
     private final ReportExportService reportExportService;
-    private final AiTestDataGenerator aiTestDataGenerator; // <-- Поле уже присутствует
+    private final AiTestDataGenerator aiTestDataGenerator;
 
-    @Value("${ai.enabled:true}") // <-- Значение по умолчанию обновлено на 'true'
+    @Value("${ai.enabled:true}")
     private boolean aiEnabled;
 
     @Value("${ai.provider:none}")
     private String aiProvider;
 
     @PostMapping("/processes/upload")
+    @Transactional
     public ResponseEntity<?> uploadProcess(
         @RequestParam("bpmn") MultipartFile bpmnFile,
         @RequestParam(value = "name", required = false) String processName,
@@ -50,18 +52,29 @@ public class BpmnApiTesterController {
             String bpmnXml = new String(bpmnFile.getBytes(), StandardCharsets.UTF_8);
             bpmnParser.validateBpmnXml(bpmnXml);
             BusinessProcess process = bpmnParser.parseBpmnXml(bpmnXml, processName);
+            
+            log.info("Parsed {} steps from BPMN", process.getSteps().size());
 
             if (openApiSpecs != null && !openApiSpecs.isEmpty()) {
                 matchOpenApiSpecs(process, openApiSpecs);
             }
 
+            // Explicitly set bidirectional relationships
+            for (ProcessStep step : process.getSteps()) {
+                step.setBusinessProcess(process);
+            }
+
             process = processRepository.save(process);
-            log.info("Process uploaded: id={}, steps={}", process.getId(), process.getSteps().size());
+            
+            // Force eager load within transaction
+            int stepCount = process.getSteps().size();
+            
+            log.info("Process uploaded: id={}, steps={}", process.getId(), stepCount);
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", process.getId());
             response.put("name", process.getName());
-            response.put("steps", process.getSteps().size());
+            response.put("steps", stepCount);
             response.put("message", "Process uploaded successfully");
             return ResponseEntity.ok(response);
 
@@ -74,6 +87,7 @@ public class BpmnApiTesterController {
     }
 
     @PostMapping("/processes/upload-sequence")
+    @Transactional
     public ResponseEntity<?> uploadSequenceDiagram(
         @RequestParam("sequence") MultipartFile sequenceFile,
         @RequestParam(value = "name", required = false) String processName
@@ -84,14 +98,21 @@ public class BpmnApiTesterController {
             String diagramText = new String(sequenceFile.getBytes(), StandardCharsets.UTF_8);
             sequenceParser.validateSequenceDiagram(diagramText);
             BusinessProcess process = sequenceParser.parseSequenceDiagram(diagramText, processName);
+            
+            for (ProcessStep step : process.getSteps()) {
+                step.setBusinessProcess(process);
+            }
+            
             process = processRepository.save(process);
+            
+            int stepCount = process.getSteps().size();
 
-            log.info("Sequence uploaded: id={}, steps={}", process.getId(), process.getSteps().size());
+            log.info("Sequence uploaded: id={}, steps={}", process.getId(), stepCount);
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", process.getId());
             response.put("name", process.getName());
-            response.put("steps", process.getSteps().size());
+            response.put("steps", stepCount);
             response.put("message", "Sequence diagram uploaded successfully");
             return ResponseEntity.ok(response);
 
@@ -104,6 +125,7 @@ public class BpmnApiTesterController {
     }
 
     @GetMapping("/processes")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> getAllProcesses() {
         List<BusinessProcess> processes = processRepository.findAll();
         
@@ -123,6 +145,7 @@ public class BpmnApiTesterController {
     }
 
     @GetMapping("/processes/{id}")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getProcess(@PathVariable Long id) {
         Optional<BusinessProcess> process = processRepository.findById(id);
         
@@ -140,6 +163,7 @@ public class BpmnApiTesterController {
         response.put("createdAt", p.getCreatedAt().toString());
         
         List<Map<String, Object>> stepsList = p.getSteps().stream()
+            .sorted(Comparator.comparing(ProcessStep::getStepOrder))
             .map(s -> {
                 Map<String, Object> stepMap = new HashMap<>();
                 stepMap.put("id", s.getId());
@@ -156,6 +180,7 @@ public class BpmnApiTesterController {
     }
 
     @PostMapping("/processes/{id}/execute")
+    @Transactional
     public ResponseEntity<?> executeTest(
         @PathVariable Long id,
         @RequestBody TestExecutionRequest request
@@ -188,6 +213,7 @@ public class BpmnApiTesterController {
     }
 
     @GetMapping("/executions/{id}")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getExecution(@PathVariable Long id) {
         Optional<TestExecution> execution = executionRepository.findById(id);
         
@@ -200,6 +226,7 @@ public class BpmnApiTesterController {
     }
 
     @GetMapping("/processes/{id}/executions")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> getProcessExecutions(@PathVariable Long id) {
         List<TestExecution> executions = executionRepository
             .findByBusinessProcessIdOrderByStartedAtDesc(id);
@@ -221,6 +248,7 @@ public class BpmnApiTesterController {
     }
 
     @GetMapping("/executions/{id}/export/html")
+    @Transactional(readOnly = true)
     public ResponseEntity<String> exportHtml(@PathVariable Long id) {
         Optional<TestExecution> execution = executionRepository.findById(id);
         
@@ -237,6 +265,7 @@ public class BpmnApiTesterController {
     }
 
     @GetMapping("/executions/{id}/export/csv")
+    @Transactional(readOnly = true)
     public ResponseEntity<String> exportCsv(@PathVariable Long id) {
         Optional<TestExecution> execution = executionRepository.findById(id);
         
@@ -253,6 +282,7 @@ public class BpmnApiTesterController {
     }
 
     @GetMapping("/executions/{id}/export/json")
+    @Transactional(readOnly = true)
     public ResponseEntity<String> exportJson(@PathVariable Long id) {
         Optional<TestExecution> execution = executionRepository.findById(id);
         
@@ -275,10 +305,8 @@ public class BpmnApiTesterController {
         boolean serviceAvailable = false;
         String effectiveProvider = "disabled";
 
-        // Проверяем, включен ли AI в конфиге
         if (aiEnabled) {
             try {
-                // Проверяем, доступен ли сервис AI (Ollama, OpenAI и т.д.)
                 serviceAvailable = aiTestDataGenerator.isAiAvailable();
                 effectiveProvider = serviceAvailable ? aiProvider : "error (service unavailable)";
             } catch (Exception e) {
@@ -291,11 +319,58 @@ public class BpmnApiTesterController {
             effectiveProvider = "disabled (config)";
         }
         
-        status.put("enabled", serviceAvailable); // true, только если включено в конфиге И сервис доступен
+        status.put("enabled", serviceAvailable);
         status.put("provider", effectiveProvider);
         status.put("fallbackAvailable", true); 
         
         return ResponseEntity.ok(status);
+    }
+
+    @GetMapping("/test-data/templates")
+    public ResponseEntity<Map<String, Object>> getTestDataTemplates() {
+        Map<String, Object> templates = new HashMap<>();
+        
+        templates.put("authentication", Map.of(
+            "grant_type", "client_credentials",
+            "client_id", "team112",
+            "scope", "openid"
+        ));
+        
+        templates.put("account", Map.of(
+            "accountId", "40817810000000000001",
+            "currency", "RUB",
+            "balance", 10000.00,
+            "status", "ACTIVE",
+            "accountType", "CURRENT"
+        ));
+        
+        templates.put("payment", Map.of(
+            "amount", 1000.00,
+            "currency", "RUB",
+            "description", "Test payment",
+            "debtorAccount", "40817810000000000001",
+            "creditorAccount", "40817810000000000002",
+            "creditorName", "Test Recipient"
+        ));
+        
+        templates.put("card", Map.of(
+            "cardNumber", "4276000000000001",
+            "expiryDate", "12/25",
+            "cvv", "123",
+            "status", "ACTIVE",
+            "cardType", "DEBIT",
+            "cardholderName", "TEST USER"
+        ));
+        
+        templates.put("transaction", Map.of(
+            "transactionId", "TXN" + System.currentTimeMillis(),
+            "amount", 500.00,
+            "currency", "RUB",
+            "transactionType", "TRANSFER",
+            "status", "COMPLETED"
+        ));
+        
+        return ResponseEntity.ok(templates);
     }
 
     @GetMapping("/health")

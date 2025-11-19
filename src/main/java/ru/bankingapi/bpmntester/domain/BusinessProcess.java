@@ -27,7 +27,8 @@ public class BusinessProcess {
     @Column(name = "bpmn_xml", columnDefinition = "TEXT")
     private String bpmnXml;
     
-    @OneToMany(mappedBy = "businessProcess", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "businessProcess", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OrderBy("stepOrder ASC")
     private List<ProcessStep> steps = new ArrayList<>();
     
     private LocalDateTime createdAt;
