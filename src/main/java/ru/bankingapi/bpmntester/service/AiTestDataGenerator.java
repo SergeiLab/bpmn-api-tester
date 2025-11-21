@@ -11,6 +11,7 @@ import ru.bankingapi.bpmntester.domain.ApiEndpointInfo;
 
 import java.util.*;
 import java.util.regex.*;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -211,6 +212,27 @@ public class AiTestDataGenerator {
     ) {
         Map<String, Object> data = new HashMap<>();
         
+        // CRITICAL: Check if this is a redemption POST request FIRST
+        if (endpointInfo != null && 
+            endpointInfo.getPath() != null && 
+            endpointInfo.getPath().contains("redemption") && 
+            "POST".equals(endpointInfo.getMethod())) {
+            
+            Map<String, Object> innerData = new HashMap<>();
+            innerData.put("redemptionReferenceNumber", UUID.randomUUID().toString());
+            innerData.put("redemptionAmount", Double.valueOf(50.0));
+            innerData.put("valuePerPoint", Double.valueOf(0.01));
+            innerData.put("programId", "A7DV56B");
+            innerData.put("catalogId", "C9AP78DS9K");
+            
+            Map<String, Object> wrapper = new HashMap<>();
+            wrapper.put("data", innerData);
+            
+            log.info("Generated fallback redemption data");
+            return wrapper;
+        }
+        
+        // For non-redemption, continue with context
         if (contextData != null && !contextData.isEmpty()) {
             data.putAll(contextData);
         }
@@ -258,12 +280,35 @@ public class AiTestDataGenerator {
         }
 
         String path = endpointInfo.getPath();
+        String method = endpointInfo.getMethod() != null ? endpointInfo.getMethod().toUpperCase() : "GET";
         
-        if (path.contains("{externalAccountID}")) {
-            data.put("externalAccountID", "40817810" + String.format("%012d", random.nextInt(1000000000)));
+        log.debug("Generating default data for {} {}", method, path);
+        
+        // CRITICAL: For Rewards Pay API - POST redemption
+        if (path.contains("redemption") && "POST".equals(method)) {
+            Map<String, Object> innerData = new HashMap<>();
+            innerData.put("redemptionReferenceNumber", UUID.randomUUID().toString());
+            innerData.put("redemptionAmount", Double.valueOf(50.0));
+            innerData.put("valuePerPoint", Double.valueOf(0.01));
+            innerData.put("programId", "A7DV56B");
+            innerData.put("catalogId", "C9AP78DS9K");
+            
+            // API requires 'data' wrapper
+            Map<String, Object> wrapper = new HashMap<>();
+            wrapper.put("data", innerData);
+            
+            log.info("Generated redemption request body: {}", wrapper);
+            return wrapper;
         }
-        if (path.contains("{accountId}")) {
-            data.put("accountId", "40817810" + String.format("%012d", random.nextInt(1000000000)));
+        
+        // For path variables
+        if (path.contains("{externalAccountID}")) {
+            data.put("externalAccountID", UUID.randomUUID().toString());
+        }
+        if (path.contains("{accountId}") || path.contains("{account_id}")) {
+            String uuid = UUID.randomUUID().toString();
+            data.put("accountId", uuid);
+            data.put("account_id", uuid);
         }
         if (path.contains("{cardId}")) {
             data.put("cardId", "4276" + String.format("%012d", random.nextInt(1000000000)));
@@ -271,14 +316,17 @@ public class AiTestDataGenerator {
         if (path.contains("{transactionId}")) {
             data.put("transactionId", "TXN" + UUID.randomUUID().toString().replace("-", "").substring(0, 15));
         }
+        if (path.contains("{payment_id}") || path.contains("{paymentId}")) {
+            String uuid = UUID.randomUUID().toString();
+            data.put("payment_id", uuid);
+            data.put("paymentId", uuid);
+        }
         
-        if (endpointInfo.getMethod() != null) {
-            String method = endpointInfo.getMethod().toUpperCase();
-            if ("POST".equals(method) || "PUT".equals(method) || "PATCH".equals(method)) {
-                data.put("amount", random.nextInt(10000) + 100);
-                data.put("currency", "RUB");
-                data.put("description", "Test transaction");
-            }
+        // Generic POST/PUT/PATCH body for non-redemption
+        if (("POST".equals(method) || "PUT".equals(method) || "PATCH".equals(method)) && data.isEmpty()) {
+            data.put("amount", random.nextInt(10000) + 100);
+            data.put("currency", "RUB");
+            data.put("description", "Test transaction");
         }
         
         return data;

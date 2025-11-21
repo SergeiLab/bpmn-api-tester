@@ -333,7 +333,7 @@ public class BpmnApiTesterController {
         templates.put("authentication", Map.of(
             "grant_type", "client_credentials",
             "client_id", "team112",
-            "scope", "openid"
+            "description", "OAuth2 authentication"
         ));
         
         templates.put("account", Map.of(
@@ -341,7 +341,7 @@ public class BpmnApiTesterController {
             "currency", "RUB",
             "balance", 10000.00,
             "status", "ACTIVE",
-            "accountType", "CURRENT"
+            "description", "Sample bank account"
         ));
         
         templates.put("payment", Map.of(
@@ -349,8 +349,7 @@ public class BpmnApiTesterController {
             "currency", "RUB",
             "description", "Test payment",
             "debtorAccount", "40817810000000000001",
-            "creditorAccount", "40817810000000000002",
-            "creditorName", "Test Recipient"
+            "creditorAccount", "40817810000000000002"
         ));
         
         templates.put("card", Map.of(
@@ -358,16 +357,7 @@ public class BpmnApiTesterController {
             "expiryDate", "12/25",
             "cvv", "123",
             "status", "ACTIVE",
-            "cardType", "DEBIT",
-            "cardholderName", "TEST USER"
-        ));
-        
-        templates.put("transaction", Map.of(
-            "transactionId", "TXN" + System.currentTimeMillis(),
-            "amount", 500.00,
-            "currency", "RUB",
-            "transactionType", "TRANSFER",
-            "status", "COMPLETED"
+            "description", "Sample payment card"
         ));
         
         return ResponseEntity.ok(templates);

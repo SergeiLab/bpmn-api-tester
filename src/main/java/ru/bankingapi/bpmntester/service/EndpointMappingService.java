@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -13,25 +14,33 @@ import java.util.regex.Pattern;
 public class EndpointMappingService {
 
     private final Map<String, String> endpointMappings = new HashMap<>();
+    private static final String DEMO_ACCOUNT_ID = UUID.randomUUID().toString();
 
     public EndpointMappingService() {
         initializeMappings();
     }
 
     private void initializeMappings() {
-        // Auth - VBank endpoints
-        // Маппим абстрактный вызов получения токена на реальный эндпоинт для client_token
-        endpointMappings.put("/auth/bank-token", "/auth/login"); 
+        // Map abstract BPMN endpoints to real Rewards Pay API
         
-        // Accounts
-        endpointMappings.put("/accounts", "/accounts");
-        endpointMappings.put("/accounts/{account_id}/balances", "/accounts/{account_id}/balances");
+        // /accounts -> Get Balance
+        endpointMappings.put("/accounts", 
+            "/api/rb/rewardsPay/hackathon/v1/cards/accounts/external/" + DEMO_ACCOUNT_ID + "/rewards/balance");
         
-        // Payments
-        endpointMappings.put("/payments", "/payments");
-        endpointMappings.put("/payments/{payment_id}", "/payments/{payment_id}");
+        // /accounts/{account_id}/balances -> Get Balance
+        endpointMappings.put("/accounts/{account_id}/balances", 
+            "/api/rb/rewardsPay/hackathon/v1/cards/accounts/external/{account_id}/rewards/balance");
         
-        log.info("Initialized {} VBank endpoint mappings", endpointMappings.size());
+        // /payments -> Redemption
+        endpointMappings.put("/payments", 
+            "/api/rb/rewardsPay/hackathon/v1/cards/accounts/external/" + DEMO_ACCOUNT_ID + "/rewards/redemption");
+        
+        // /payments/{payment_id} -> Check last redemption (use same endpoint)
+        endpointMappings.put("/payments/{payment_id}", 
+            "/api/rb/rewardsPay/hackathon/v1/cards/accounts/external/" + DEMO_ACCOUNT_ID + "/rewards/balance");
+        
+        log.info("Initialized {} endpoint mappings for Rewards Pay API", endpointMappings.size());
+        log.info("Using demo externalAccountID: {}", DEMO_ACCOUNT_ID);
     }
 
     public String mapEndpoint(String originalEndpoint) {
@@ -39,20 +48,19 @@ public class EndpointMappingService {
             return originalEndpoint;
         }
 
-        // Прямое совпадение
+        // Direct match
         if (endpointMappings.containsKey(originalEndpoint)) {
             String mapped = endpointMappings.get(originalEndpoint);
             log.debug("Mapped endpoint: {} -> {}", originalEndpoint, mapped);
             return mapped;
         }
 
-        // Совпадение по шаблонам (для path variables)
+        // Pattern matching with path variables
         for (Map.Entry<String, String> entry : endpointMappings.entrySet()) {
             String pattern = entry.getKey();
             String replacement = entry.getValue();
 
             if (pattern.contains("{")) {
-                // Превращаем шаблон вида /accounts/{id}/balances в regex
                 String regexPattern = pattern.replaceAll("\\{[^}]+\\}", "([^/]+)");
                 regexPattern = "^" + regexPattern + "$";
 
@@ -61,9 +69,14 @@ public class EndpointMappingService {
 
                 if (m.matches()) {
                     String result = replacement;
-                    // Подставляем захваченные группы обратно в шаблон
                     for (int i = 1; i <= m.groupCount(); i++) {
-                        result = result.replaceFirst("\\{[^}]+\\}", m.group(i));
+                        // Replace path variable with captured value (or UUID if it looks like an ID)
+                        String capturedValue = m.group(i);
+                        // Use UUID format for account_id
+                        if (capturedValue.matches("\\d+") || capturedValue.equals("account_id")) {
+                            capturedValue = DEMO_ACCOUNT_ID;
+                        }
+                        result = result.replaceFirst("\\{[^}]+\\}", capturedValue);
                     }
                     log.debug("Mapped endpoint (pattern): {} -> {}", originalEndpoint, result);
                     return result;
@@ -78,5 +91,9 @@ public class EndpointMappingService {
     public void addMapping(String from, String to) {
         endpointMappings.put(from, to);
         log.info("Added endpoint mapping: {} -> {}", from, to);
+    }
+    
+    public String getDemoAccountId() {
+        return DEMO_ACCOUNT_ID;
     }
 }

@@ -1,5 +1,8 @@
 package ru.bankingapi.bpmntester.service;
 
+import java.util.UUID;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -139,38 +142,84 @@ public class TestOrchestrator {
                 return handleOAuth2Authentication(step, context, startTime);
             }
 
+            // --- ОБНОВЛЕННЫЙ БЛОК ГЕНЕРАЦИИ ДАННЫХ ---
             ApiEndpointInfo endpointInfo = parseEndpointInfo(step);
-
-            Map<String, Object> requestData = new HashMap<>();
-            if (context != null) {
-                requestData.putAll(context);
-            }
-
-            if (generateTestData) {
-                Map<String, Object> generatedData = aiTestDataGenerator.generateTestData(endpointInfo, context);
-                if (generatedData != null && !generatedData.isEmpty()) {
-                    requestData.putAll(generatedData);
-                }
-            }
 
             String originalEndpoint = step.getApiEndpoint();
             String mappedEndpoint = endpointMappingService.mapEndpoint(originalEndpoint);
-            
+
             if (!originalEndpoint.equals(mappedEndpoint)) {
                 log.info("Endpoint mapped: {} -> {}", originalEndpoint, mappedEndpoint);
             }
 
+            boolean isRedemption = mappedEndpoint.contains("redemption") && "POST".equals(step.getHttpMethod());
+
+            log.info(">>> Step: {}, isRedemption: {}, generateTestData: {}", 
+                step.getStepName(), isRedemption, generateTestData);
+
+            Map<String, Object> requestData = new HashMap<>();
+
+            // CRITICAL: Always generate for redemption POST
+            if (isRedemption) {
+                log.info(">>> Generating redemption data (forced)");
+                
+                Map<String, Object> innerData = new HashMap<>();
+                innerData.put("redemptionReferenceNumber", UUID.randomUUID().toString());
+                innerData.put("redemptionAmount", 50.0);
+                innerData.put("valuePerPoint", 0.01);
+                innerData.put("programId", "A7DV56B");
+                innerData.put("catalogId", "C9AP78DS9K");
+                
+                requestData.put("data", innerData);
+                
+                log.info(">>> Generated redemption body: {}", requestData);
+                
+            } else if (generateTestData) {
+                log.info(">>> Calling AI generator for non-redemption request");
+                Map<String, Object> generatedData = aiTestDataGenerator.generateTestData(endpointInfo, context);
+                if (generatedData != null && !generatedData.isEmpty()) {
+                    requestData.putAll(generatedData);
+                    log.info("Added generated data with keys: {}", generatedData.keySet());
+                }
+            }
+
+            // Only add context for NON-redemption requests
+            if (context != null && !isRedemption) {
+                requestData.putAll(context);
+                log.debug("Added context data");
+            }
+
             String url = buildUrl(apiBaseUrl, mappedEndpoint, requestData);
+            // --- КОНЕЦ ОБНОВЛЕННОГО БЛОКА ГЕНЕРАЦИИ ДАННЫХ ---
 
             HttpHeaders headers = oauth2Service.createAuthHeaders();
+
+            // Add required headers for Rewards Pay API
+            if (mappedEndpoint.contains("/api/rb/rewardsPay")) {
+                headers.set("Correlation-ID", UUID.randomUUID().toString());
+                if ("POST".equals(step.getHttpMethod())) {
+                    headers.set("Content-Type", "application/json");
+                }
+                log.debug("Added Rewards API headers: Correlation-ID={}", headers.getFirst("Correlation-ID"));
+            }
             
             String requestBody = null;
             if ("POST".equals(step.getHttpMethod()) || "PUT".equals(step.getHttpMethod()) || "PATCH".equals(step.getHttpMethod())) {
                 requestBody = objectMapper.writeValueAsString(requestData);
             }
             
+            // ДОБАВЛЕННЫЙ БЛОК ЛОГА
+            log.info("=== REQUEST DEBUG ===");
+            log.info("URL: {}", url);
+            log.info("Method: {}", step.getHttpMethod());
+            log.info("Request Body: {}", requestBody);
+            log.info("Request Data Map: {}", requestData);
+            log.info("====================");
+            
             HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
             result.setRequestPayload(requestBody != null ? requestBody : "{}");
+
+            log.debug("Sending {} request to {} with Authorization: Bearer ***", step.getHttpMethod(), url);
 
             ResponseEntity<String> response = executeHttpRequest(
                 restTemplate,
@@ -197,7 +246,7 @@ public class TestOrchestrator {
             result.setHttpStatusCode(e.getStatusCode().value());
             result.setErrorMessage(e.getMessage());
             result.setResponsePayload(e.getResponseBodyAsString());
-            log.error("HTTP error in step {}: {}", step.getStepName(), e.getMessage());
+            log.error("HTTP error in step {}: {} - {}", step.getStepName(), e.getStatusCode(), e.getMessage());
 
         } catch (Exception e) {
             result.setStatus(StepStatus.FAILED);
@@ -217,18 +266,12 @@ public class TestOrchestrator {
         String endpoint = step.getApiEndpoint().toLowerCase();
         String name = step.getStepName() != null ? step.getStepName().toLowerCase() : "";
         
-        // VBank auth endpoints
-        return endpoint.contains("/auth/login") ||
-               endpoint.contains("/auth/bank-token") ||
+        return endpoint.contains("/auth/") ||
                endpoint.equals("/auth/bank-token") ||
+               name.contains("authentication") ||
                name.contains("auth");
     }
 
-    /**
-     * Handles the OAuth2 authentication step by obtaining an access token
-     * and simulating a successful response, then adding the token to the context.
-     * Note: This method no longer hardcodes client_id and client_secret in requestData.
-     */
     private StepExecutionResult handleOAuth2Authentication(
         ProcessStep step,
         Map<String, Object> context,
@@ -244,16 +287,13 @@ public class TestOrchestrator {
             .build();
 
         try {
-            // Use the injected OAuth2Service to get the actual access token
             String accessToken = oauth2Service.getAccessToken();
             
-            // Prepare request data (simulating a client_credentials flow request body, 
-            // but without hardcoded or unnecessary sensitive data since the token is already obtained)
             Map<String, Object> requestData = new HashMap<>();
             requestData.put("grant_type", "client_credentials");
-            // Removed hardcoded client_id and client_secret as per request/cleanup
+            requestData.put("client_id", "team112");
+            requestData.put("client_secret", "***hidden***");
             
-            // Simulate the successful response payload
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("access_token", accessToken.substring(0, Math.min(50, accessToken.length())) + "...");
             responseData.put("token_type", "Bearer");
@@ -263,10 +303,7 @@ public class TestOrchestrator {
             result.setResponsePayload(objectMapper.writeValueAsString(responseData));
             result.setHttpStatusCode(200);
             
-            // Add the real access token to the execution context for subsequent steps
-            context.put("access_token", accessToken);
-            
-            log.info("OAuth2 authentication successful");
+            log.info("OAuth2 authentication successful, token cached in OAuth2Service");
             
         } catch (Exception e) {
             result.setStatus(StepStatus.FAILED);
@@ -355,19 +392,57 @@ public class TestOrchestrator {
         if (path == null || path.isEmpty()) {
             return baseUrl;
         }
-
         String url = baseUrl + path;
-
-        if (data != null) {
+        // Replace path variables with data from context
+        if (data != null && !data.isEmpty()) {
             for (Map.Entry<String, Object> entry : data.entrySet()) {
                 String placeholder = "{" + entry.getKey() + "}";
                 if (url.contains(placeholder)) {
                     url = url.replace(placeholder, String.valueOf(entry.getValue()));
+                    log.debug("Replaced {} with {}", placeholder, entry.getValue());
                 }
             }
         }
-
-        return url;
+        
+        // If there are still unresolved path variables, generate UUIDs for them
+        Pattern pattern = Pattern.compile("\\{([^}]+)\\}");
+        Matcher matcher = pattern.matcher(url);
+        
+        String tempUrl = url;
+        List<String> toReplace = new ArrayList<>();
+        
+        // Find all unresolved variables first
+        Matcher findMatcher = pattern.matcher(tempUrl);
+        while (findMatcher.find()) {
+            toReplace.add(findMatcher.group(1));
+        }
+        
+        for (String varName : toReplace) {
+            if (tempUrl.contains("{" + varName + "}")) {
+                String replacement;
+                
+                // Generate appropriate value based on variable name
+                if (varName.contains("account") || varName.contains("Account")) {
+                    replacement = UUID.randomUUID().toString();
+                    log.debug("Auto-generated UUID for {}: {}", varName, replacement);
+                } else if (varName.contains("id") || varName.contains("ID")) {
+                    replacement = UUID.randomUUID().toString();
+                    log.debug("Auto-generated UUID for {}: {}", varName, replacement);
+                } else {
+                    replacement = "auto-" + UUID.randomUUID().toString().substring(0, 8);
+                    log.warn("Unknown path variable {}, using: {}", varName, replacement);
+                }
+                
+                tempUrl = tempUrl.replace("{" + varName + "}", replacement);
+                
+                // Also store in context for potential future use
+                if (data != null) {
+                    data.put(varName, replacement);
+                }
+            }
+        }
+        
+        return tempUrl;
     }
 
     private RestTemplate selectRestTemplate(ExecutionMode mode) {

@@ -1,10 +1,5 @@
 server:
   port: 8080
-  servlet:
-    context-path: /
-  compression:
-    enabled: true
-    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
 
 spring:
   application:
@@ -15,81 +10,40 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password: 
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
-      connection-timeout: 30000
   
   jpa:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
-        use_sql_comments: false
-        jdbc:
-          batch_size: 20
-        order-inserts: true
-        order-updates: true
     open-in-view: false
   
   h2:
     console:
       enabled: true
       path: /h2-console
-      settings:
-        web-allow-others: false
 
   servlet:
     multipart:
-      enabled: true
       max-file-size: 10MB
       max-request-size: 10MB
-      file-size-threshold: 2KB
 
 banking-api:
-  # Используем bank-token endpoint (не login!)
-  auth-url: https://vbank.open.bankingapi.ru/auth/bank-token
-  base-url: https://vbank.open.bankingapi.ru
-  gost-base-url: https://gost.open.bankingapi.ru
+  auth-url: https://auth.bankingapi.ru/auth/realms/kubernetes/protocol/openid-connect/token
+  base-url: https://api.bankingapi.ru
+  gost-base-url: https://api.gost.bankingapi.ru:8443
   
-  client-id: team112
-  client-secret: TzNr0aYAz5vWT5Dib9l7FNR59NgPrmyR
+  client-id: ${BANKING_API_CLIENT_ID:team112}
+  client-secret: ${BANKING_API_CLIENT_SECRET:TzNr0aYAz5vWT5Dib9l7FNR59NgPrmyR}
 
 ai:
-  provider: ${AI_PROVIDER:ollama}
+  enabled: true
+  provider: ollama
   ollama:
-    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-    model: ${OLLAMA_MODEL:llama3.2:3b}
-  openai:
-    api-key: ${OPENAI_API_KEY}
-    model: ${OPENAI_MODEL:gpt-4}
-  enabled: false
+    base-url: http://localhost:11434
+    model: llama3.2:3b
 
 test-execution:
-  timeout-seconds: ${TEST_TIMEOUT:30}
-  retry-attempts: ${TEST_RETRY_ATTEMPTS:3}
-  retry-delay-ms: ${TEST_RETRY_DELAY:1000}
-  parallel-execution: ${TEST_PARALLEL:false}
-  max-concurrent-tests: 5
-
-report:
-  export:
-    include-request-payload: true
-    include-response-payload: true
-    include-validation-errors: true
-    include-ai-analysis: true
-  formats:
-    html:
-      enabled: true
-      pretty-print: true
-    csv:
-      enabled: true
-      delimiter: ","
-    json:
-      enabled: true
-      pretty-print: true
+  timeout-seconds: 30
 
 logging:
   level:

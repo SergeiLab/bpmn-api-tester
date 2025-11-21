@@ -8,11 +8,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Service
@@ -42,6 +42,7 @@ public class OAuth2Service {
         tokenLock.lock();
         try {
             if (isTokenValid()) {
+                log.debug("Using cached access token");
                 return cachedAccessToken;
             }
             return fetchNewAccessToken();
@@ -53,6 +54,7 @@ public class OAuth2Service {
     public String refreshAccessToken() {
         tokenLock.lock();
         try {
+            log.info("Forcing access token refresh");
             return fetchNewAccessToken();
         } finally {
             tokenLock.unlock();
@@ -68,27 +70,28 @@ public class OAuth2Service {
 
     private String fetchNewAccessToken() {
         try {
-            log.info("Fetching VBank client_token with client_id: {}", clientId);
+            log.info("Fetching OAuth2 token from Keycloak with client_id: {}", clientId);
             
             if (clientId == null || clientId.isEmpty()) {
-                throw new RuntimeException("Client ID not configured");
+                throw new RuntimeException("Client ID not configured. Set BANKING_API_CLIENT_ID environment variable.");
             }
             
             if (clientSecret == null || clientSecret.isEmpty()) {
-                throw new RuntimeException("Client Secret not configured");
+                throw new RuntimeException("Client Secret not configured. Set BANKING_API_CLIENT_SECRET environment variable.");
             }
 
-            // VBank использует JSON body для /auth/login
+            // Keycloak requires application/x-www-form-urlencoded
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-            Map<String, String> body = new HashMap<>();
-            body.put("client_id", clientId);
-            body.put("client_secret", clientSecret);
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("grant_type", "client_credentials");
+            body.add("client_id", clientId);
+            body.add("client_secret", clientSecret);
 
-            HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
 
-            log.debug("Sending auth request to VBank: {}", authUrl);
+            log.debug("Sending OAuth2 request to Keycloak: {}", authUrl);
             
             ResponseEntity<String> response = standardRestTemplate.exchange(
                 authUrl,
@@ -101,27 +104,27 @@ public class OAuth2Service {
                 JsonNode tokenResponse = objectMapper.readTree(response.getBody());
                 
                 if (!tokenResponse.has("access_token")) {
-                    throw new RuntimeException("No access_token in response");
+                    throw new RuntimeException("No access_token in response from Keycloak");
                 }
                 
                 cachedAccessToken = tokenResponse.get("access_token").asText();
                 
-                // VBank токены живут 24 часа
+                // Keycloak tokens typically expire in 300-3600 seconds
                 int expiresIn = tokenResponse.has("expires_in") 
                     ? tokenResponse.get("expires_in").asInt() 
-                    : 86400;
+                    : 3600;
                 
                 tokenExpiryTime = Instant.now().plusSeconds(expiresIn);
 
-                log.info("VBank client_token obtained, valid for {} hours", expiresIn / 3600);
+                log.info("OAuth2 token obtained successfully, expires in {} seconds", expiresIn);
                 return cachedAccessToken;
             } else {
-                throw new RuntimeException("Failed to obtain token: HTTP " + response.getStatusCode());
+                throw new RuntimeException("Failed to obtain OAuth2 token: HTTP " + response.getStatusCode());
             }
 
         } catch (Exception e) {
-            log.error("Error obtaining VBank token: {}", e.getMessage(), e);
-            throw new RuntimeException("Cannot obtain VBank token: " + e.getMessage(), e);
+            log.error("Error obtaining OAuth2 token: {}", e.getMessage(), e);
+            throw new RuntimeException("Cannot obtain OAuth2 token: " + e.getMessage(), e);
         }
     }
 
