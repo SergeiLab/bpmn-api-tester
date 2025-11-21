@@ -1,5 +1,0 @@
-Execution ID,Process Name,Status,Mode,Started At,Completed At
-1,Bonus Payment BPMN,FAILED,STANDARD,2025-11-19 18:48:55,2025-11-19 18:48:56
-
-Step Order,Step Name,Status,HTTP Status,Execution Time (ms),Error Message
-0,Аутентификация: POST /auth/bank-token,FAILED,,771,"OAuth2 authentication failed: Cannot obtain VBank token: 422 Unprocessable Entity on POST request for ""https://vbank.open.bankingapi.ru/auth/bank-token"": ""{""detail"":[{""type"":""missing"",""loc"":[""query"",""client_id""],""msg"":""Field required"",""input"":null},{""type"":""missing"",""loc"":[""query"",""client_secret""],""msg"":""Field required"",""input"":null}]}"""
