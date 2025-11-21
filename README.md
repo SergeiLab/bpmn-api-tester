@@ -71,8 +71,6 @@ bpmn-api-tester/
 │   └── static/index.html
 ├── 01_bonus_payment.bpmn  # Пример BPMN процесса
 ├── 01_bonus_payment.puml  # Пример Sequence диаграммы
-├── demo-test.ps1          # Полное демо
-├── quick-test.ps1         # Быстрая проверка
 └── README.md
 ```
 
@@ -133,7 +131,7 @@ curl http://localhost:8080/api/v1/executions/1/export/html -o report.html
 start report.html
 ```
 
-## 🤖 AI Генерация данных
+##  AI Генерация данных
 
 Приложение использует Ollama для генерации реалистичных тестовых данных.
 
@@ -248,7 +246,7 @@ Get-Content .env
 curl http://localhost:8080/api/v1/ai/status
 ```
 
-## 👥 Авторы
+## 👥 Комманда Связь
 
 **Team team112** - VTB API Hackathon 2025
 
