@@ -1,0 +1,644 @@
+{
+  "mappings": [
+    {
+      "serviceName": "Cервис платежа с базовым сценарием оплаты",
+      "description": "Запрос детальной информации по универсальному платежу",
+      "bpmnPath": "/payments/{paymentId}",
+      "realPath": "/api/rb/pmnt/acceptance/universal/hackathon/v1/payments/{paymentId}",
+      "method": "GET",
+      "sourceFile": "Cервис платежа с базовым сценарием оплаты.oas3.json"
+    },
+    {
+      "serviceName": "Cервис платежа с базовым сценарием оплаты",
+      "description": "Получение списка продуктов, доступных для оплаты универсальных платежей",
+      "bpmnPath": "/products",
+      "realPath": "/api/rb/pmnt/acceptance/universal/hackathon/v1/products",
+      "method": "GET",
+      "sourceFile": "Cервис платежа с базовым сценарием оплаты.oas3.json"
+    },
+    {
+      "serviceName": "Cервис платежа с базовым сценарием оплаты",
+      "description": "Запрос на оплату универсального платежа",
+      "bpmnPath": "/payments/confirm",
+      "realPath": "/api/rb/pmnt/acceptance/universal/hackathon/v1/payments/confirm",
+      "method": "POST",
+      "sourceFile": "Cервис платежа с базовым сценарием оплаты.oas3.json"
+    },
+    {
+      "serviceName": "Cервис платежа с базовым сценарием оплаты",
+      "description": "Запрос на оплату универсального платежа",
+      "bpmnPath": "/payments/request",
+      "realPath": "/api/rb/pmnt/acceptance/universal/hackathon/v1/payments/request",
+      "method": "POST",
+      "sourceFile": "Cервис платежа с базовым сценарием оплаты.oas3.json"
+    },
+    {
+      "serviceName": "Cервис платежа с базовым сценарием оплаты",
+      "description": "Запрос чека по универсальному платежу",
+      "bpmnPath": "/payments/{paymentId}/check",
+      "realPath": "/api/rb/pmnt/acceptance/universal/hackathon/v1/payments/{paymentId}/check",
+      "method": "GET",
+      "sourceFile": "Cервис платежа с базовым сценарием оплаты.oas3.json"
+    },
+    {
+      "serviceName": "Cервис платежа с базовым сценарием оплаты",
+      "description": "Запрос на старт оплаты универсального платежа",
+      "bpmnPath": "/payments/start",
+      "realPath": "/api/rb/pmnt/acceptance/universal/hackathon/v1/payments/start",
+      "method": "POST",
+      "sourceFile": "Cервис платежа с базовым сценарием оплаты.oas3.json"
+    },
+    {
+      "serviceName": "Cервис платежа сотовому оператору",
+      "description": "Получение списка продуктов, доступных для оплаты сотового платежа",
+      "bpmnPath": "/products",
+      "realPath": "/api/rb/pmnt/acceptance/mobile/hackathon/v1/products",
+      "method": "POST",
+      "sourceFile": "Cервис платежа сотовому оператору.oas3.json"
+    },
+    {
+      "serviceName": "Cервис платежа сотовому оператору",
+      "description": "Получение параметров сотового оператора для указанного номера телефона",
+      "bpmnPath": "/phones/info",
+      "realPath": "/api/rb/pmnt/acceptance/mobile/hackathon/v1/phones/info",
+      "method": "POST",
+      "sourceFile": "Cервис платежа сотовому оператору.oas3.json"
+    },
+    {
+      "serviceName": "Cервис платежа сотовому оператору",
+      "description": "Запрос на оплату номера мобильного телефона",
+      "bpmnPath": "/payments/request",
+      "realPath": "/api/rb/pmnt/acceptance/mobile/hackathon/v1/payments/request",
+      "method": "POST",
+      "sourceFile": "Cервис платежа сотовому оператору.oas3.json"
+    },
+    {
+      "serviceName": "Cервис платежа сотовому оператору",
+      "description": "Запрос на подтверждение оплаты номера мобильного телефона",
+      "bpmnPath": "/payments/confirm",
+      "realPath": "/api/rb/pmnt/acceptance/mobile/hackathon/v1/payments/confirm",
+      "method": "POST",
+      "sourceFile": "Cервис платежа сотовому оператору.oas3.json"
+    },
+    {
+      "serviceName": "Cервис платежа сотовому оператору",
+      "description": "Запрос для старта платежа",
+      "bpmnPath": "/payments/start",
+      "realPath": "/api/rb/pmnt/acceptance/mobile/hackathon/v1/payments/start",
+      "method": "POST",
+      "sourceFile": "Cервис платежа сотовому оператору.oas3.json"
+    },
+    {
+      "serviceName": "Cервис платежа сотовому оператору",
+      "description": "Запрос детальной информации по платежу",
+      "bpmnPath": "/payments/{paymentId}",
+      "realPath": "/api/rb/pmnt/acceptance/mobile/hackathon/v1/payments/{paymentId}",
+      "method": "GET",
+      "sourceFile": "Cервис платежа сотовому оператору.oas3.json"
+    },
+    {
+      "serviceName": "Cервис платежа сотовому оператору",
+      "description": "Запрос чека по платежу",
+      "bpmnPath": "/payments/{paymentId}/check",
+      "realPath": "/api/rb/pmnt/acceptance/mobile/hackathon/v1/payments/{paymentId}/check",
+      "method": "GET",
+      "sourceFile": "Cервис платежа сотовому оператору.oas3.json"
+    },
+    {
+      "serviceName": "Заявки на кредит наличными",
+      "description": "Сохранить данные по заявке",
+      "bpmnPath": "/applications",
+      "realPath": "/api/rb/mssa/partner/hackathon/v1/applications",
+      "method": "POST",
+      "sourceFile": "Заявки на кредит наличными.oas3.json"
+    },
+    {
+      "serviceName": "Заявки на кредит наличными",
+      "description": "Проверить статус заявки",
+      "bpmnPath": "/applications/{applicationId}",
+      "realPath": "/api/rb/mssa/partner/hackathon/v1/applications/{applicationId}",
+      "method": "GET",
+      "sourceFile": "Заявки на кредит наличными.oas3.json"
+    },
+    {
+      "serviceName": "Заявки на кредит наличными",
+      "description": "Принять предложение",
+      "bpmnPath": "/applications/{applicationId}",
+      "realPath": "/api/rb/mssa/partner/hackathon/v1/applications/{applicationId}",
+      "method": "PATCH",
+      "sourceFile": "Заявки на кредит наличными.oas3.json"
+    },
+    {
+      "serviceName": "Инициирование перевода денежных средств клиента третьей стороной",
+      "description": "Создание ресурса согласия на проведение платежа.",
+      "bpmnPath": "/payment-consents",
+      "realPath": "/extapi/aft/payments/hackathon/v1/payment-consents",
+      "method": "POST",
+      "sourceFile": "Инициирование перевода денежных средств клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Инициирование перевода денежных средств клиента третьей стороной",
+      "description": "Получение ресурса согласия",
+      "bpmnPath": "/payment-consents/{consentId}",
+      "realPath": "/extapi/aft/payments/hackathon/v1/payment-consents/{consentId}",
+      "method": "GET",
+      "sourceFile": "Инициирование перевода денежных средств клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Инициирование перевода денежных средств клиента третьей стороной",
+      "description": "Инициирование платежа.",
+      "bpmnPath": "/payments",
+      "realPath": "/extapi/aft/payments/hackathon/v1/payments",
+      "method": "POST",
+      "sourceFile": "Инициирование перевода денежных средств клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Инициирование перевода денежных средств клиента третьей стороной",
+      "description": "Получение ресурса платежа",
+      "bpmnPath": "/payments/{paymentId}",
+      "realPath": "/extapi/aft/payments/hackathon/v1/payments/{paymentId}",
+      "method": "GET",
+      "sourceFile": "Инициирование перевода денежных средств клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Операций с лидами",
+      "description": "Получить информацию о лидах",
+      "bpmnPath": "/leads",
+      "realPath": "/openapi/smb/lecs/lead/hackathon/v1/leads",
+      "method": "GET",
+      "sourceFile": "Операции с лидами.oas3.json"
+    },
+    {
+      "serviceName": "Операций с лидами",
+      "description": "Добавить лиды",
+      "bpmnPath": "/leads_impersonal",
+      "realPath": "/openapi/smb/lecs/lead/hackathon/v1/leads_impersonal",
+      "method": "POST",
+      "sourceFile": "Операции с лидами.oas3.json"
+    },
+    {
+      "serviceName": "Операций с лидами",
+      "description": "Проверяет лидов",
+      "bpmnPath": "/check_leads",
+      "realPath": "/openapi/smb/lecs/lead/hackathon/v1/check_leads",
+      "method": "POST",
+      "sourceFile": "Операции с лидами.oas3.json"
+    },
+    {
+      "serviceName": "Оплата баллами бонусов",
+      "description": "Получить текущий баланс наград для указанного аккаунта и атрибутов программы, настроенных для конкретного партнера",
+      "bpmnPath": "/cards/accounts/external/{externalAccountID}/rewards/balance",
+      "realPath": "/api/rb/rewardsPay/hackathon/v1/cards/accounts/external/{externalAccountID}/rewards/balance",
+      "method": "GET",
+      "sourceFile": "Оплата баллами бонусов.oas3.json"
+    },
+    {
+      "serviceName": "Оплата баллами бонусов",
+      "description": "Выполните выписку по кредиту для данного аккаунта и соответствующих атрибутов программы.",
+      "bpmnPath": "/cards/accounts/external/{externalAccountID}/rewards/redemption",
+      "realPath": "/api/rb/rewardsPay/hackathon/v1/cards/accounts/external/{externalAccountID}/rewards/redemption",
+      "method": "POST",
+      "sourceFile": "Оплата баллами бонусов.oas3.json"
+    },
+    {
+      "serviceName": "Периодические  переводы денежных средств с переменными реквизитами",
+      "description": "Создание Согласия на инициирование",
+      "bpmnPath": "/vrp-consents",
+      "realPath": "/extapi/aft/vrp/hackathon/v1/vrp-consents",
+      "method": "POST",
+      "sourceFile": "Периодические  переводы денежных средств с переменными реквизитами.oas3.json"
+    },
+    {
+      "serviceName": "Периодические  переводы денежных средств с переменными реквизитами",
+      "description": "Получение ресурса Согласия на инициирование",
+      "bpmnPath": "/vrp-consents/{consentId}",
+      "realPath": "/extapi/aft/vrp/hackathon/v1/vrp-consents/{consentId}",
+      "method": "GET",
+      "sourceFile": "Периодические  переводы денежных средств с переменными реквизитами.oas3.json"
+    },
+    {
+      "serviceName": "Периодические  переводы денежных средств с переменными реквизитами",
+      "description": "Отзыв Согласия на инициирование",
+      "bpmnPath": "/vrp-consents/{consentId}",
+      "realPath": "/extapi/aft/vrp/hackathon/v1/vrp-consents/{consentId}",
+      "method": "DELETE",
+      "sourceFile": "Периодические  переводы денежных средств с переменными реквизитами.oas3.json"
+    },
+    {
+      "serviceName": "Периодические  переводы денежных средств с переменными реквизитами",
+      "description": "Создание Подтверждения наличия необходимого количества средств",
+      "bpmnPath": "/vrp-consents/{consentId}/funds-confirmation",
+      "realPath": "/extapi/aft/vrp/hackathon/v1/vrp-consents/{consentId}/funds-confirmation",
+      "method": "POST",
+      "sourceFile": "Периодические  переводы денежных средств с переменными реквизитами.oas3.json"
+    },
+    {
+      "serviceName": "Периодические  переводы денежных средств с переменными реквизитами",
+      "description": "Инициирование платежа",
+      "bpmnPath": "/vrp-payments",
+      "realPath": "/extapi/aft/vrp/hackathon/v1/vrp-payments",
+      "method": "POST",
+      "sourceFile": "Периодические  переводы денежных средств с переменными реквизитами.oas3.json"
+    },
+    {
+      "serviceName": "Периодические  переводы денежных средств с переменными реквизитами",
+      "description": "Получение ресурса  перевода денежных средств с указанием его состояния",
+      "bpmnPath": "/vrp-payments/{VRPId}",
+      "realPath": "/extapi/aft/vrp/hackathon/v1/vrp-payments/{VRPId}",
+      "method": "GET",
+      "sourceFile": "Периодические  переводы денежных средств с переменными реквизитами.oas3.json"
+    },
+    {
+      "serviceName": "Периодические  переводы денежных средств с переменными реквизитами",
+      "description": "Детальное описание состояния ресурса  перевода денежных средств",
+      "bpmnPath": "/vrp-payments/{VRPId}/payment-details",
+      "realPath": "/extapi/aft/vrp/hackathon/v1/vrp-payments/{VRPId}/payment-details",
+      "method": "GET",
+      "sourceFile": "Периодические  переводы денежных средств с переменными реквизитами.oas3.json"
+    },
+    {
+      "serviceName": "Поисковые сервисы каталога поставщиков услуг",
+      "description": "Поиск услуг ПУ",
+      "bpmnPath": "/catalog/operations",
+      "realPath": "/api/rb/pmnt/catalog/hackathon/v1/catalog/operations",
+      "method": "GET",
+      "sourceFile": "Поисковые сервисы каталога поставщиков услуг.oas3.json"
+    },
+    {
+      "serviceName": "Поисковые сервисы каталога поставщиков услуг",
+      "description": "Получение услуги ПУ по ID",
+      "bpmnPath": "/catalog/operations/{id}",
+      "realPath": "/api/rb/pmnt/catalog/hackathon/v1/catalog/operations/{id}",
+      "method": "GET",
+      "sourceFile": "Поисковые сервисы каталога поставщиков услуг.oas3.json"
+    },
+    {
+      "serviceName": "Поисковые сервисы каталога поставщиков услуг",
+      "description": "Получение услуг ПУ по списку ID",
+      "bpmnPath": "/catalog/operations/list",
+      "realPath": "/api/rb/pmnt/catalog/hackathon/v1/catalog/operations/list",
+      "method": "GET",
+      "sourceFile": "Поисковые сервисы каталога поставщиков услуг.oas3.json"
+    },
+    {
+      "serviceName": "Поисковые сервисы каталога поставщиков услуг",
+      "description": "Получение доступных категорий услуг ПУ",
+      "bpmnPath": "/catalog/categories",
+      "realPath": "/api/rb/pmnt/catalog/hackathon/v1/catalog/categories",
+      "method": "GET",
+      "sourceFile": "Поисковые сервисы каталога поставщиков услуг.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Создание ресурса согласия на доступ к счету.",
+      "bpmnPath": "/account-consents",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/account-consents",
+      "method": "POST",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Получение ресурса согласия",
+      "bpmnPath": "/account-consents/{consentId}",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/account-consents/{consentId}",
+      "method": "GET",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Отзыв согласия на доступ к счету",
+      "bpmnPath": "/account-consents/{consentId}",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/account-consents/{consentId}",
+      "method": "DELETE",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Поручение на извлечение ресурса согласия",
+      "bpmnPath": "/account-consents/{consentId}/retrieval-grant",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/account-consents/{consentId}/retrieval-grant",
+      "method": "GET",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Получение списка счетов",
+      "bpmnPath": "/accounts",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/accounts",
+      "method": "GET",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Получение детальной информации о счете",
+      "bpmnPath": "/accounts/{accountId}",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/accounts/{accountId}",
+      "method": "GET",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Баланс банковского счета",
+      "bpmnPath": "/accounts/{accountId}/balance",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/accounts/{accountId}/balance",
+      "method": "GET",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Баланс банковского счета",
+      "bpmnPath": "/balances",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/balances",
+      "method": "GET",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Ресурс транзакции с идентификатором accountId",
+      "bpmnPath": "/accounts/{accountId}/transaction",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/accounts/{accountId}/transaction",
+      "method": "GET",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Список транзакций по всем счетам",
+      "bpmnPath": "/transactions",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/transactions",
+      "method": "GET",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Получения идентификатора выписки statementId по идентификатору счета accountId",
+      "bpmnPath": "/statements/{accountId}",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/statements/{accountId}",
+      "method": "POST",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Получения выписки по идентификатору счета и идентификатору выписки",
+      "bpmnPath": "/accounts/{accountId}/statements/{statementId}",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/accounts/{accountId}/statements/{statementId}",
+      "method": "GET",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Получение информации о счете клиента третьей стороной",
+      "description": "Выписки по всем авторизованным счетам",
+      "bpmnPath": "/statements",
+      "realPath": "/extapi/aft/clientInfo/hackathon/v1/statements",
+      "method": "GET",
+      "sourceFile": "Получение информации о счете клиента третьей стороной.oas3.json"
+    },
+    {
+      "serviceName": "Сервис управления картой ФЛ, информационные запросы",
+      "description": "Получение реквизитов карты",
+      "bpmnPath": "/credentials/{publicId}",
+      "realPath": "/api/rb/dks/cardinfo/hackathon/v1/credentials/{publicId}",
+      "method": "GET",
+      "sourceFile": "Сервис управления картой ФЛ, информационные запросы.oas3.json"
+    },
+    {
+      "serviceName": "Сервис управления картой ФЛ, информационные запросы",
+      "description": "Получение кода CVV карты",
+      "bpmnPath": "/cvv/{publicId}",
+      "realPath": "/api/rb/dks/cardinfo/hackathon/v1/cvv/{publicId}",
+      "method": "GET",
+      "sourceFile": "Сервис управления картой ФЛ, информационные запросы.oas3.json"
+    },
+    {
+      "serviceName": "Сервис управления картой ФЛ, информационные запросы",
+      "description": "Токенизация карты",
+      "bpmnPath": "/token/{publicId}",
+      "realPath": "/api/rb/dks/cardinfo/hackathon/v1/token/{publicId}",
+      "method": "POST",
+      "sourceFile": "Сервис управления картой ФЛ, информационные запросы.oas3.json"
+    },
+    {
+      "serviceName": "Сервис управления картой ФЛ, информационные запросы",
+      "description": "Получение токенов карты",
+      "bpmnPath": "/tokens/{publicId}",
+      "realPath": "/api/rb/dks/cardinfo/hackathon/v1/tokens/{publicId}",
+      "method": "GET",
+      "sourceFile": "Сервис управления картой ФЛ, информационные запросы.oas3.json"
+    },
+    {
+      "serviceName": "Сервис управления картой ФЛ, операционные запросы",
+      "description": "Закрытие карты при нулевом балансе",
+      "bpmnPath": "/close/{publicId}",
+      "realPath": "/api/rb/dks/cardops/hackathon/v1/close/{publicId}",
+      "method": "POST",
+      "sourceFile": "Сервис управления картой ФЛ, операционные запросы.oas3.json"
+    },
+    {
+      "serviceName": "Сервис управления картой ФЛ, операционные запросы",
+      "description": "Установка/смена пин-кода для карты",
+      "bpmnPath": "/pin/{publicId}",
+      "realPath": "/api/rb/dks/cardops/hackathon/v1/pin/{publicId}",
+      "method": "POST",
+      "sourceFile": "Сервис управления картой ФЛ, операционные запросы.oas3.json"
+    },
+    {
+      "serviceName": "Сервис управления картой ФЛ, операционные запросы",
+      "description": "Установка/смена статуса карты",
+      "bpmnPath": "/status/{publicId}",
+      "realPath": "/api/rb/dks/cardops/hackathon/v1/status/{publicId}",
+      "method": "PUT",
+      "sourceFile": "Сервис управления картой ФЛ, операционные запросы.oas3.json"
+    },
+    {
+      "serviceName": "Сервис управления картой ФЛ, эмиссионные запросы",
+      "description": "Открытие карты",
+      "bpmnPath": "/prepaid",
+      "realPath": "/api/rb/dks/cardemission/hackathon/v1/prepaid",
+      "method": "POST",
+      "sourceFile": "Сервис управления картой ФЛ, эмиссионные запросы.oas3.json"
+    },
+    {
+      "serviceName": "Сервисы платежей оплата штрафов",
+      "description": "Запрос поиска начислений по штрафам ГИБДД по СТС или ВУ",
+      "bpmnPath": "/charges",
+      "realPath": "/api/rb/pmnt/acceptance/traffic-penalties/hackathon/v1/charges",
+      "method": "GET",
+      "sourceFile": "Сервисы платежей оплата штрафов.oas3.json"
+    },
+    {
+      "serviceName": "Сервисы платежей оплата штрафов",
+      "description": "Запрос поиска начисления по штрафу ГИБДД по УИН",
+      "bpmnPath": "/charges/{uin}",
+      "realPath": "/api/rb/pmnt/acceptance/traffic-penalties/hackathon/v1/charges/{uin}",
+      "method": "GET",
+      "sourceFile": "Сервисы платежей оплата штрафов.oas3.json"
+    },
+    {
+      "serviceName": "Сервисы платежей оплата штрафов",
+      "description": "Старт платежа запрос списка продуктов клиента для старта платежа",
+      "bpmnPath": "/products",
+      "realPath": "/api/rb/pmnt/acceptance/traffic-penalties/hackathon/v1/products",
+      "method": "GET",
+      "sourceFile": "Сервисы платежей оплата штрафов.oas3.json"
+    },
+    {
+      "serviceName": "Сервисы платежей оплата штрафов",
+      "description": "Запрос на оплату штрафа ГИБДД",
+      "bpmnPath": "/payments/request",
+      "realPath": "/api/rb/pmnt/acceptance/traffic-penalties/hackathon/v1/payments/request",
+      "method": "POST",
+      "sourceFile": "Сервисы платежей оплата штрафов.oas3.json"
+    },
+    {
+      "serviceName": "Сервисы платежей оплата штрафов",
+      "description": "Запрос на подтверждение оплаты штрафа ГИБДД",
+      "bpmnPath": "/payments/confirm",
+      "realPath": "/api/rb/pmnt/acceptance/traffic-penalties/hackathon/v1/payments/confirm",
+      "method": "POST",
+      "sourceFile": "Сервисы платежей оплата штрафов.oas3.json"
+    },
+    {
+      "serviceName": "Сервисы платежей оплата штрафов",
+      "description": "Запрос детальной информации по платежу",
+      "bpmnPath": "/payments/{paymentId}",
+      "realPath": "/api/rb/pmnt/acceptance/traffic-penalties/hackathon/v1/payments/{paymentId}",
+      "method": "GET",
+      "sourceFile": "Сервисы платежей оплата штрафов.oas3.json"
+    },
+    {
+      "serviceName": "Сервисы платежей оплата штрафов",
+      "description": "Запрос чека по платежу",
+      "bpmnPath": "/payments/check/{paymentId}",
+      "realPath": "/api/rb/pmnt/acceptance/traffic-penalties/hackathon/v1/payments/check/{paymentId}",
+      "method": "GET",
+      "sourceFile": "Сервисы платежей оплата штрафов.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Список доступных банковских продуктов",
+      "bpmnPath": "/products",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/products",
+      "method": "GET",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Детальная информация о продукте по его идентификатору",
+      "bpmnPath": "/products/{productId}",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/products/{productId}",
+      "method": "GET",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Создать ресурс лидогенерации",
+      "bpmnPath": "/customer-leads",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/customer-leads",
+      "method": "POST",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Детали лидогенерации",
+      "bpmnPath": "/customer-leads/{customerLeadId}",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/customer-leads/{customerLeadId}",
+      "method": "GET",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Удаление лидогенерации",
+      "bpmnPath": "/customer-leads/{customerLeadId}",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/customer-leads/{customerLeadId}",
+      "method": "DELETE",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Создать ресурс Предложения по продукту",
+      "bpmnPath": "/product-offers",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/product-offers",
+      "method": "POST",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Список всех Предложений по продукту для лида",
+      "bpmnPath": "/product-offers",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/product-offers",
+      "method": "GET",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Детали Предложения по продукту для лида",
+      "bpmnPath": "/product-offers/{offerId}",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/product-offers/{offerId}",
+      "method": "GET",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Удаление Предложения по продукту",
+      "bpmnPath": "/product-offers/{offerId}",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/product-offers/{offerId}",
+      "method": "DELETE",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Создать ресурс Согласия на предложение по продукту",
+      "bpmnPath": "/product-offer-consents",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/product-offer-consents",
+      "method": "POST",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Детали Согласия на предложение по продукту",
+      "bpmnPath": "/product-offer-consents/{consentId}",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/product-offer-consents/{consentId}",
+      "method": "GET",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Удаление Согласия на предложение по продукту",
+      "bpmnPath": "/product-offer-consents/{consentId}",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/product-offer-consents/{consentId}",
+      "method": "DELETE",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Создать ресурс Заявления по продукту",
+      "bpmnPath": "/product-application",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/product-application",
+      "method": "POST",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Список завлений по продукту и статус",
+      "bpmnPath": "/product-application",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/product-application",
+      "method": "GET",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Детали Заявления по продукту",
+      "bpmnPath": "/product-application/{productApplicationId}",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/product-application/{productApplicationId}",
+      "method": "GET",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    },
+    {
+      "serviceName": "Управление продуктами кредитной организации",
+      "description": "Удаление Заявления по продукту",
+      "bpmnPath": "/product-application/{productApplicationId}",
+      "realPath": "/extapi/aft/manageCreditProducts/hackathon/v1/product-application/{productApplicationId}",
+      "method": "DELETE",
+      "sourceFile": "Управление продуктами кредитной организации.oas3.json"
+    }
+  ]
+}
